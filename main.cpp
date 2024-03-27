@@ -291,29 +291,55 @@ float radians(float a) { return M_PI/180 * a; }
 
 const float step = 1; 
 
-void hough(cv::Mat bin, cv::Mat & intersections) {
+void houghLines(cv::Mat bin, cv::Mat & intersections) {
+    uchar th = 170;
 
-    int max_theta = 360 / step; 
+    int max_theta = 270 / step; 
     int max_rho = std::ceil(sqrt(bin.cols*bin.cols + bin.rows*bin.rows));
 
-    intersections = cv::Mat::zeros(max_theta, max_rho, CV_32S);
+    intersections = cv::Mat::zeros(max_theta, max_rho, CV_32F);
     
     for (int y = 0; y < bin.rows; y++){
         for(int x = 0; x < bin.cols; x++){
-            if (bin.at<uchar>(y,x) != 255) continue;
+            if (bin.at<uchar>(y,x) < th) continue;
+
+            float grad = ((float)(bin.at<uchar>(y,x) - th)) / ( 255 - th ) ;
 
             for (int t = 0; t < max_theta; t++){
-                float rad = radians(t * step);
-                
-                for (int r = 0; r < max_rho; r++){
-                    // point x,y 
-                    // line rho, theta
-                    // intersection ?
-                    float s = x * cos(rad) + y * sin(rad);
-                    const float e = 1.0f;
+                float theta = radians(t * step);
+                int rho = int(x*cos(theta) + y*sin(theta));
                     
-                    if (s < r + e && s > r - e) 
-                        intersections.at<unsigned int>(t, r)++;
+                intersections.at<float>(t, rho) += grad;
+            }
+        }
+    }
+}
+
+void houghCircle(cv::Mat bin, cv::Mat & intersections) {
+    // a, b, r
+
+    int max_r = std::min(bin.cols, bin.rows);
+    int max_a = bin.cols;
+    int max_b = bin.rows;
+    uchar th = 170;
+    
+    int sizes[] {max_a, max_b, max_r};
+    
+    intersections = cv::Mat::zeros(3, sizes, CV_8UC1);
+    
+    for (int y = 0; y < bin.rows; y++){
+        for(int x = 0; x < bin.cols; x++){
+            if (bin.at<uchar>(y,x) < th) continue;
+
+            float grad = ((float)(bin.at<uchar>(y,x) - th)) / ( 255 - th ) ;
+
+            for (int a = 0; a < max_a; a++) {
+                for (int b = 0; b < max_b; b++) {
+                    float da = a - x;
+                    float db = b - y;
+                    // Calculer directement r
+                    float r = sqrt(da * da + db * db);
+                    intersections.at<float>(a, b, r)++;
                 }
             }
         }
@@ -354,7 +380,9 @@ int main(int argc, char** argv)
     Dimension dim = MULTI_DIM;
 
     std::vector<cv::Mat> grds;
-    grds = compute_gradients(blur, h, dim);
+    grds = compute_gradients(img, h, dim);
+
+
 
     cv::Mat mgs, drs, fnl;
 //    for (auto & grd : grds) {
@@ -363,6 +391,7 @@ int main(int argc, char** argv)
 
     magnitude(grds, mgs, drs);
 
+    
     calcHist(&mgs, 1, 0, cv::Mat(), hist, 1, &histSize, histRange);
     // gnuPlot(hist, "Histogramme magnitude", histSize);
 
@@ -385,16 +414,15 @@ int main(int argc, char** argv)
     hysteresis(mgs, fnl, 24, 4);
     // direction(tmp, fnl, drs);
 
-    // print_mat(mgs);
-
-    cv::imshow("Magnitude", fnl);
+    // cv::imshow("Magnitude", mgs);
+    // cv::waitKey();
     cv::Mat intersect;
-    hough(fnl, intersect);
+    houghLines(fnl, intersect);
 
     int img_width = fnl.cols;
     int img_height = fnl.rows;
     
-    print_mat<int>(intersect);
+    print_mat<float>(intersect);
 
     cv::Mat hough_lines = cv::Mat::zeros(fnl.rows, fnl.cols, CV_8UC3);
 
@@ -414,7 +442,7 @@ int main(int argc, char** argv)
 
     for (int y = 0; y < intersect.rows; y++){
         for (int x = 0; x < intersect.cols; x++){
-            if (intersect.at<unsigned int>(y,x) < 0.5 * max) continue;
+            if (intersect.at<float>(y,x) < 0.3 * max) continue;
 
             float rho = x;
             float theta = radians(y * step);
@@ -434,8 +462,8 @@ int main(int argc, char** argv)
 
             float x1 = 0;
             float y1 = rho/b;
-            float x2 = 256;
-            float y2 = (rho - 256*a)/b;
+            float x2 = img_width;
+            float y2 = (rho - img_height*a)/b;
 
 
             cv::line(hough_lines, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(255, 0, 0), 1);
