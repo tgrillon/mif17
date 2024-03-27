@@ -123,11 +123,12 @@ float convolution(const cv::Mat& img, const cv::Mat& h, int x, int y)
     return sum;
 }
 
+template <typename T>
 void print_mat(cv::Mat const& mat)
 {
     for (int r = 0; r < mat.rows; ++r) {
         for (int c = 0; c < mat.cols; ++c) {
-            std::cout << float(mat.at<uchar>(r, c)) << " ";
+            std::cout << (float)mat.at<T>(r, c) << " ";
         }
         std::cout << std::endl;
     }
@@ -286,9 +287,42 @@ void hysteresis(cv::Mat const& src, cv::Mat & dst, uchar sh, uchar sb)
     }
 }
 
+float radians(float a) { return M_PI/180 * a; }
+
+const float step = 1; 
+
+void hough(cv::Mat bin, cv::Mat & intersections) {
+
+    int max_theta = 360 / step; 
+    int max_rho = std::ceil(sqrt(bin.cols*bin.cols + bin.rows*bin.rows));
+
+    intersections = cv::Mat::zeros(max_theta, max_rho, CV_32S);
+    
+    for (int y = 0; y < bin.rows; y++){
+        for(int x = 0; x < bin.cols; x++){
+            if (bin.at<uchar>(y,x) != 255) continue;
+
+            for (int t = 0; t < max_theta; t++){
+                float rad = radians(t * step);
+                
+                for (int r = 0; r < max_rho; r++){
+                    // point x,y 
+                    // line rho, theta
+                    // intersection ?
+                    float s = x * cos(rad) + y * sin(rad);
+                    const float e = 1.0f;
+                    
+                    if (s < r + e && s > r - e) 
+                        intersections.at<unsigned int>(t, r)++;
+                }
+            }
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
-    const char* filepath = (argc > 1) ? argv[1] : "../ressources/lena.png";
+    const char* filepath = (argc > 1) ? argv[1] : "../ressources/Droites_simples.png";
 
     cv::Mat img, blur;
     img = cv::imread(filepath, 0);
@@ -334,28 +368,85 @@ int main(int argc, char** argv)
 
     /*********Seuillage Unique (par Histogramme)************/
 
-    float pct = (argc > 2) ? float(std::atoi(argv[2]))/100 : 0.1;
-    float sum = 0; 
-    float imgSize = float(img.rows * img.cols);
-    int gs = 0;
-    while (sum/imgSize < pct && gs < 256) {
-        sum += hist.at<float>(gs,0);
-        ++gs;
-    }
+    // float pct = (argc > 2) ? float(std::atoi(argv[2]))/100 : 0.1;
+    // float sum = 0; 
+    // float imgSize = float(img.rows * img.cols);
+    // int gs = 0;
+    // while (sum/imgSize < pct && gs < 256) {
+    //     sum += hist.at<float>(gs,0);
+    //     ++gs;
+    // }
 
-    uchar gs_8uc = cv::saturate_cast<uchar>(gs);
-    thresholding(mgs, mgs, gs_8uc);
+    // uchar gs_8uc = cv::saturate_cast<uchar>(gs);
+    // thresholding(mgs, mgs, gs_8uc);
 
     /*******************************************************/
     cv::Mat tmp;
-    hysteresis(mgs, tmp, 24, 4);
-    direction(tmp, fnl, drs);
+    hysteresis(mgs, fnl, 24, 4);
+    // direction(tmp, fnl, drs);
+
+    // print_mat(mgs);
 
     cv::imshow("Magnitude", fnl);
-    for (int k = 0; k < dim; ++k) {
-        std::string title = std::to_string(k) + " gradient";
-        cv::imshow(title, grds[k]);
+    cv::Mat intersect;
+    hough(fnl, intersect);
+
+    int img_width = fnl.cols;
+    int img_height = fnl.rows;
+    
+    print_mat<int>(intersect);
+
+    cv::Mat hough_lines = cv::Mat::zeros(fnl.rows, fnl.cols, CV_8UC3);
+
+    double max, min;
+    cv::Point empty;
+    cv::minMaxLoc(intersect, &min, &max, &empty, &empty );
+    
+    // cv::Mat graph = cv::Mat::zeros(intersect.rows, intersect.cols, CV_8UC1);
+    // for (int y = 0; y < graph.cols; y++){
+    //     for (int x = 0; x < graph.rows; x++) {
+    //         graph.at<uchar>(y,x) = (intersect.at<unsigned int>(y,x) / max) * 255;
+    //     }
+    // }
+
+    // cv::imshow("test", graph);
+
+
+    for (int y = 0; y < intersect.rows; y++){
+        for (int x = 0; x < intersect.cols; x++){
+            if (intersect.at<unsigned int>(y,x) < 0.5 * max) continue;
+
+            float rho = x;
+            float theta = radians(y * step);
+
+            float a = cos(theta);
+            float b = sin(theta);
+
+            // t*dir 
+
+            // xa + yb = p
+            // y = (p - xa)/b
+
+            // float x1 = rho/a;
+            // float y1 = rho/b;
+            // float x2 = (rho - b*img_height)/a;
+            // float y2 = (rho - a*img_width)/b;
+
+            float x1 = 0;
+            float y1 = rho/b;
+            float x2 = 256;
+            float y2 = (rho - 256*a)/b;
+
+
+            cv::line(hough_lines, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(255, 0, 0), 1);
+        }
     }
+
+    // for (int k = 0; k < dim; ++k) {
+    //     std::string title = std::to_string(k) + " gradient";
+    //     cv::imshow(title, grds[k]);
+    // }
+    cv::imshow("Hough lines", hough_lines);
     cv::waitKey(0);
     return 0;
 }
