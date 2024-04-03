@@ -173,8 +173,8 @@ std::vector<cv::Mat> compute_gradients(const cv::Mat& src, const cv::Mat& h, Dim
 
 void magnitude(std::vector<cv::Mat> const& grds, cv::Mat & mgs, cv::Mat & drs)
 {
-    mgs = cv::Mat::zeros(grds[0].size(), grds[0].type());
-    drs = cv::Mat::zeros(grds[0].size(), grds[0].type());
+    mgs = cv::Mat::zeros(grds[0].size(), CV_8UC1);
+    drs = cv::Mat::zeros(grds[0].size(), CV_8UC1);
     int rows = grds[0].rows;
     int cols = grds[0].cols;
     for (int r = 1; r < rows-1; ++r) {
@@ -294,7 +294,7 @@ const float step = 1;
 void houghLines(cv::Mat bin, cv::Mat & intersections) {
     uchar th = 170;
 
-    int max_theta = 270 / step; 
+    int max_theta = 360 / step; 
     int max_rho = std::ceil(sqrt(bin.cols*bin.cols + bin.rows*bin.rows));
 
     intersections = cv::Mat::zeros(max_theta, max_rho, CV_32F);
@@ -309,7 +309,7 @@ void houghLines(cv::Mat bin, cv::Mat & intersections) {
                 float theta = radians(t * step);
                 int rho = int(x*cos(theta) + y*sin(theta));
                     
-                intersections.at<float>(t, rho) += grad;
+                intersections.at<float>(t, rho) += 1;
             }
         }
     }
@@ -346,6 +346,21 @@ void houghCircle(cv::Mat bin, cv::Mat & intersections) {
     }
 }
 
+void intersect_img(cv::Mat const& bin, cv::Mat const& lns, cv::Mat & dst) 
+{
+    assert(bin.type() == lns.type());
+    dst = lns.clone();
+    int rows = bin.rows;
+    int cols = bin.cols;
+    for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < cols; ++c) {
+            if (dst.at<uchar>(r, c) != 255) continue; 
+            dst.at<uchar>(r, c) = (bin.at<uchar>(r, c) == 255) ? 255 : 0; 
+        }
+    }
+}
+
+
 int main(int argc, char** argv)
 {
     const char* filepath = (argc > 1) ? argv[1] : "../ressources/Droites_simples.png";
@@ -373,7 +388,7 @@ int main(int argc, char** argv)
     // img = egalisation(img, hist, histSize);
 
     int i = 11;
-    bilateralFilter(img, blur, i, i*2, i/2);
+    bilateralFilter(img, blur, i, i*2, i/2); 
 
     cv::Mat h(3, 3, CV_32F, const_cast<float*>(kernel::kirsch));
 
@@ -424,7 +439,7 @@ int main(int argc, char** argv)
     
     print_mat<float>(intersect);
 
-    cv::Mat hough_lines = cv::Mat::zeros(fnl.rows, fnl.cols, CV_8UC3);
+    cv::Mat hough_lines = cv::Mat::zeros(fnl.rows, fnl.cols, CV_8UC1);
 
     double max, min;
     cv::Point empty;
@@ -438,6 +453,14 @@ int main(int argc, char** argv)
     // }
 
     // cv::imshow("test", graph);
+
+    struct Axis {
+        Axis(float x1, float x2, float y1, float y2)
+        : x1(x1), x2(x2), y1(y1), y2(y2) {}
+
+        float x1, x2, y1, y2;
+    };
+    std::vector<Axis> droites;
 
 
     for (int y = 0; y < intersect.rows; y++){
@@ -461,20 +484,89 @@ int main(int argc, char** argv)
             // float y2 = (rho - a*img_width)/b;
 
             float x1 = 0;
+            
             float y1 = rho/b;
             float x2 = img_width;
             float y2 = (rho - img_height*a)/b;
 
-
-            cv::line(hough_lines, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(255, 0, 0), 1);
+            droites.push_back(Axis(x1,x2,y1,y2));
+            cv::line(hough_lines, cv::Point(x1, y1), cv::Point(x2, y2), 255, 1);
         }
     }
+
+    struct Segment {
+        Segment(cv::Point a, cv::Point b)
+        : a(a), b(b) {}
+        cv::Point a, b;
+    };
+
+    std::vector<Segment> segments;
+
+    cv::Mat dest;
+
+    intersect_img(fnl, hough_lines, dest);
+
+    // }
 
     // for (int k = 0; k < dim; ++k) {
     //     std::string title = std::to_string(k) + " gradient";
     //     cv::imshow(title, grds[k]);
     // }
+
+    cv::imshow("img", img);
     cv::imshow("Hough lines", hough_lines);
+    cv::imshow("ezaczevr", dest);
     cv::waitKey(0);
     return 0;
 }
+
+
+
+
+// Iter sur les segments
+    // for (auto d : droites) {
+    //     const float step = 0.5f;
+    //     const int error = 3;
+
+    //     float t = 0;
+    //     float count = 0;
+    //     float err_count = error;
+
+    //     float dx = d.x2 - d.x1;
+    //     float dy = d.y2 - d.y1;
+        
+    //     cv::Point2f o = 
+    //         {std::clamp(d.x1, 0.f, (float)img_width), 
+    //         std::clamp(d.y1, 0.f, (float)img_height)};
+    //     cv::Vec2f tmp = cv::Vec2f(
+    //         std::clamp(dx, 0.f, (float)img_width), 
+    //         std::clamp(dy, 0.f, (float)img_height)
+    //         );
+    //     cv::Point2f dir = cv::normalize(tmp) * step;
+    //     cv::Point2f p = o, segment_start; 
+
+    //     do {
+    //         p += dir; 
+
+    //         bool is_edge = mgs.at<uchar>(p.y, p.x) > 100 ? true : false;
+
+    //         if (!is_edge){
+    //             if (err_count == error - 1){
+    //                 segments.push_back(Segment(segment_start, p));
+    //             }
+
+    //             err_count++;
+    //             continue;
+    //         }
+
+    //         if (err_count >= error) {
+    //             segment_start = p;
+    //         }
+            
+    //         err_count = 0;
+
+    //     } while (p.x < intersect.cols && p.x >= 0 && p.y < intersect.rows && p.y >= 0);
+
+    //     for (auto s : segments){
+    //         cv::line(hough_lines, s.a, s.b, cv::Scalar(255, 0, 0), 1);
+    //     }
