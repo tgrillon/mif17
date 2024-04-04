@@ -1,20 +1,44 @@
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgproc.hpp"
-
-#include <cstdio>
-#include <cmath>
-#include <vector>
-#include <fstream>
-#include <iostream>
-#include <stack>
-
-#include "hough.hpp"
-#include "ui.hpp"
-#include "kernel.hpp"
+#pragma once 
 #include "gradient.hpp"
+#include "hough.hpp"
 
-#include "applications.hpp"
+struct HoughLinesResult {
+    cv::Mat inter, regimg, hough_lines, final;
+};
+
+void houghLinesFromBin(HoughLinesResult& result, const cv::Mat& img, uchar houghThresh = 170){
+    cv::Mat intersect;
+    houghLines(img, intersect, houghThresh);
+
+    result.hough_lines = cv::Mat::zeros(img.rows, img.cols, CV_8UC1);
+    result.regimg = cv::Mat::zeros(intersect.rows, intersect.cols, CV_8UC3);
+
+    double min, max;
+    minmax(intersect, &min, &max);
+
+    auto regions = get_regions(intersect);
+
+    draw_lines(regions, result.hough_lines);
+    draw_local_maximums(regions, result.regimg);
+
+    intersect.convertTo(result.inter, CV_8UC1, 255/max);
+}
+
+
+
+
+/**
+ * Gradient 
+ * GradientHyst (threshold) 
+ * Houghlines from binary image ( threshold )
+ * Houghlines from colored image ( threshold, hysteresis ? )
+ * Houghlines from colored image with hysteresis ( threshold, hysteresis  )
+*/
+
+/*
+ * 
+ */
+
 
 int main(int argc, char** argv)
 {
@@ -147,81 +171,4 @@ int main(int argc, char** argv)
     }
 
     intersect_img(fnl, hough_lines, dest);
-
-    // }
-
-    // for (int k = 0; k < dim; ++k) {
-    //     std::string title = std::to_string(k) + " gradient";
-    //     cv::imshow(title, grds[k]);
-    // }
-
-    cv::Mat showInter;
-    intersect.convertTo(showInter, CV_8UC1, 255/max);
-    cv::imshow("intersect", showInter);
-    cv::imshow("regimg", regimg);
-    cv::imshow("img", img);
-    cv::imshow("Hough lines", hough_lines);
-    cv::imshow("ezaczevr", dest);
-    cv::waitKey(0);
-    return 0;
 }
-
-/*
-* 
-    struct Segment {
-        Segment(cv::Point a, cv::Point b)
-        : a(a), b(b) {}
-        cv::Point a, b;
-    };
-    std::vector<Segment> segments;
-
-
-*
-**/
-// Iter sur les segments
-    // for (auto d : droites) {
-    //     const float step = 0.5f;
-    //     const int error = 3;
-
-    //     float t = 0;
-    //     float count = 0;
-    //     float err_count = error;
-
-    //     float dx = d.x2 - d.x1;
-    //     float dy = d.y2 - d.y1;
-        
-    //     cv::Point2f o = 
-    //         {std::clamp(d.x1, 0.f, (float)img_width), 
-    //         std::clamp(d.y1, 0.f, (float)img_height)};
-    //     cv::Vec2f tmp = cv::Vec2f(
-    //         std::clamp(dx, 0.f, (float)img_width), 
-    //         std::clamp(dy, 0.f, (float)img_height)
-    //         );
-    //     cv::Point2f dir = cv::normalize(tmp) * step;
-    //     cv::Point2f p = o, segment_start; 
-
-    //     do {
-    //         p += dir; 
-
-    //         bool is_edge = mgs.at<uchar>(p.y, p.x) > 100 ? true : false;
-
-    //         if (!is_edge){
-    //             if (err_count == error - 1){
-    //                 segments.push_back(Segment(segment_start, p));
-    //             }
-
-    //             err_count++;
-    //             continue;
-    //         }
-
-    //         if (err_count >= error) {
-    //             segment_start = p;
-    //         }
-            
-    //         err_count = 0;
-
-    //     } while (p.x < intersect.cols && p.x >= 0 && p.y < intersect.rows && p.y >= 0);
-
-    //     for (auto s : segments){
-    //         cv::line(hough_lines, s.a, s.b, cv::Scalar(255, 0, 0), 1);
-    //     }
