@@ -3,6 +3,7 @@
 #include "gradient.hpp"
 #include "opencv2/imgproc.hpp"
 #include "utils.hpp"
+#include <opencv2/core.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/highgui.hpp>
 
@@ -46,7 +47,7 @@ public:
 //
 class DemoHoughLinesGrad : public DemoHoughLinesBase {
 private:
-  int hough_thresh = 0, multi_dim = 1, compute = 0;
+  int hough_thresh = 0, multi_dim = 1, compute = 0, invert = 0;
   int regThresh1 = 4, regThresh2 = 1, grad = 1;
 
 public:
@@ -55,6 +56,12 @@ public:
   void process() override {
     float regThresh1 = ((float)this->regThresh1) / 100;
     float regThresh2 = ((float)this->regThresh2) / 100;
+    cv::Mat img;
+    if (invert)
+      cv::bitwise_not(this->img, img);
+    else
+      img = this->img;
+
     if (grad)
       result = houghLinesWithGradient(img, hough_thresh,
                                       multi_dim ? Dimension::MULTI_DIM
@@ -77,7 +84,10 @@ public:
 
     cv::createTrackbar("hough_thresh", "base", &hough_thresh, 255, compute_fn,
                        this);
-    cv::createTrackbar("grad_use", "base", &grad, 1, compute_fn, this);
+    cv::createTrackbar("bin only / with grad", "base", &grad, 1, compute_fn,
+                       this);
+    cv::createTrackbar("bin_only_invert_input", "base", &invert, 1, compute_fn,
+                       this);
     cv::createTrackbar("grad_multi_dim", "base", &multi_dim, 1, compute_fn,
                        this);
     cv::createTrackbar("ref_thresh_initial", "base", &regThresh1, 100,
