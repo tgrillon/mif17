@@ -57,7 +57,7 @@ public:
     float regThresh1 = ((float)this->regThresh1) / 100;
     float regThresh2 = ((float)this->regThresh2) / 100;
     cv::Mat img;
-    if (invert)
+    if (invert && !grad)
       cv::bitwise_not(this->img, img);
     else
       img = this->img;
