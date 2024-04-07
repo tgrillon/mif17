@@ -36,8 +36,10 @@ void houghLinesWithGradient(HoughLinesResult &result, const cv::Mat &img,
   std::vector<cv::Mat> grds;
   grds = compute_gradients(img, h, dim);
 
-  cv::Mat mgs, drs;
+  cv::Mat mgs, drs, fnl;
   magnitude(grds, mgs, drs);
 
-  houghLinesFromBin(result, mgs, houghThresh);
+  hysteresis(mgs, fnl, 24, 4);
+
+  houghLinesFromBin(result, fnl, houghThresh);
 }
