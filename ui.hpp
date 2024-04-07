@@ -47,21 +47,22 @@ public:
 class DemoHoughLinesGrad : public DemoHoughLinesBase {
 private:
   int hough_thresh = 0, multi_dim = 1, compute = 0;
-  int regThresh1 = 4, regThresh2 = 1;
+  int regThresh1 = 4, regThresh2 = 1, grad = 1;
 
 public:
   DemoHoughLinesGrad(const cv::Mat &img) : DemoHoughLinesBase(img) {}
 
   void process() override {
-    if (compute) {
-      float regThresh1 = ((float)this->regThresh1) / 100;
-      float regThresh2 = ((float)this->regThresh2) / 100;
+    float regThresh1 = ((float)this->regThresh1) / 100;
+    float regThresh2 = ((float)this->regThresh2) / 100;
+    if (grad)
       result = houghLinesWithGradient(img, hough_thresh,
                                       multi_dim ? Dimension::MULTI_DIM
                                                 : Dimension::TWO_DIM,
                                       regThresh1, regThresh2);
-      window();
-    }
+    else
+      result = houghLinesFromBin(img, hough_thresh, regThresh1, regThresh2);
+    window();
   }
 
   void configure_window() override {
@@ -69,20 +70,32 @@ public:
 
     auto compute_fn = [](int, void *user) {
       DemoHoughLinesGrad *bthis = static_cast<DemoHoughLinesGrad *>(user);
-      bthis->process();
+      if (bthis->compute) {
+        bthis->process();
+      }
     };
 
     cv::createTrackbar("hough_thresh", "base", &hough_thresh, 255, compute_fn,
                        this);
+    cv::createTrackbar("grad_use", "base", &grad, 1, compute_fn, this);
     cv::createTrackbar("grad_multi_dim", "base", &multi_dim, 1, compute_fn,
                        this);
     cv::createTrackbar("ref_thresh_initial", "base", &regThresh1, 100,
                        compute_fn, this);
     cv::createTrackbar("reg_thresh_neigh", "base", &regThresh2, 100, compute_fn,
                        this);
-    cv::createTrackbar("Compute on changes:", "base", &compute, 1, compute_fn,
-                       this);
+    cv::createTrackbar("Compute on changes (key 'R' = compute)", "base",
+                       &compute, 1, compute_fn, this);
 
-    cv::waitKey();
+    while (true) {
+      switch (cv::waitKey()) {
+      case 'r':
+        this->process();
+        break;
+
+      case 27:
+        return;
+      }
+    }
   }
 };
