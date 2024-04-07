@@ -56,10 +56,10 @@ public:
     if (compute) {
       float regThresh1 = ((float)this->regThresh1) / 100;
       float regThresh2 = ((float)this->regThresh2) / 100;
-      houghLinesWithGradient(result, img, hough_thresh,
-                             multi_dim ? Dimension::MULTI_DIM
-                                       : Dimension::TWO_DIM,
-                             regThresh1, regThresh2);
+      result = houghLinesWithGradient(img, hough_thresh,
+                                      multi_dim ? Dimension::MULTI_DIM
+                                                : Dimension::TWO_DIM,
+                                      regThresh1, regThresh2);
       window();
     }
   }
