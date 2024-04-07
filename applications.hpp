@@ -18,7 +18,7 @@ HoughLinesResult houghLinesFromBin(const cv::Mat &img, uchar houghThresh = 170,
   result.regimg = cv::Mat::zeros(intersect.rows, intersect.cols, CV_8UC3);
   result.final = cv::Mat::zeros(img.rows, img.cols, CV_8UC1);
 
-  auto regions = get_regions(intersect);
+  auto regions = get_regions(intersect, regthresh1, regThresh2);
   draw_local_maximums(regions, result.regimg);
   draw_lines(regions, result.hough_lines);
 
