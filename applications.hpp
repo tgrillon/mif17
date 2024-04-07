@@ -7,7 +7,8 @@ struct HoughLinesResult {
 };
 
 void houghLinesFromBin(HoughLinesResult &result, const cv::Mat &img,
-                       uchar houghThresh = 170) {
+                       uchar houghThresh = 170, float regthresh1 = 0.4f,
+                       float regThresh2 = 0.1f) {
   cv::Mat intersect;
   houghLines(img, intersect, houghThresh);
 
@@ -17,16 +18,18 @@ void houghLinesFromBin(HoughLinesResult &result, const cv::Mat &img,
 
   auto regions = get_regions(intersect);
   draw_local_maximums(regions, result.regimg);
-  draw_lines(regions, result.final);
+  draw_lines(regions, result.hough_lines);
 
   double min, max;
   minmax(intersect, &min, &max);
   intersect.convertTo(result.inter, CV_8UC1, 255 / max);
+
+  intersect_img(img, result.hough_lines, result.final);
 }
 
 void houghLinesWithGradient(HoughLinesResult &result, const cv::Mat &img,
-                            uchar houghThresh = 170,
-                            Dimension dim = MULTI_DIM) {
+                            uchar houghThresh = 170, Dimension dim = MULTI_DIM,
+                            float regthresh1 = 0.4f, float regThresh2 = 0.1f) {
   // Unused because blur var wasn't used anywhere
   // int i = 11;
   // cv::bilateralFilter(img, blur, i, i * 2, i / 2);

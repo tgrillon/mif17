@@ -85,7 +85,8 @@ void color_pixel_region(cv::Mat &bin, cv::Mat &result,
   }
 }
 
-std::vector<Region> get_regions(const cv::Mat &bin) {
+std::vector<Region> get_regions(const cv::Mat &bin, float thresh1 = 0.4f,
+                                float thresh2 = 0.05f) {
   cv::Mat img = bin.clone();
   cv::Mat result = cv::Mat::zeros(bin.rows, bin.cols, bin.type());
 
@@ -96,13 +97,13 @@ std::vector<Region> get_regions(const cv::Mat &bin) {
   cv::Point empty;
   cv::minMaxLoc(bin, &min, &max, &empty, &empty);
 
-  const float thresh = 0.4 * max;
-  const float thresh2 = 0.05 * max;
+  thresh1 *= max;
+  thresh2 *= max;
 
   for (int y = 0; y < img.rows; y++) {
     for (int x = 0; x < img.cols; x++) {
 
-      if (img.at<float>(y, x) > thresh) {
+      if (img.at<float>(y, x) > thresh1) {
         std::stack<cv::Point> stack;
         stack.push({x, y});
         Region region;
