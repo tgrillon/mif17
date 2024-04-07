@@ -1,6 +1,7 @@
 #pragma once
 #include "opencv2/imgproc.hpp"
 #include "utils.hpp"
+#include "kernel.hpp"
 
 enum Dimension {
     TWO_DIM=2,
