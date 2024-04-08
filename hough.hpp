@@ -3,80 +3,122 @@
 #include "utils.hpp"
 #include <stack>
 
-const float step = 1;
-
-struct Region {
-  cv::Point2f center = {0.f, 0.f};
-  int count = 0;
+struct Line {
+    float theta=0.f;
+    float rho=0.f;
 };
 
-void houghLines(cv::Mat bin, cv::Mat &intersections, uchar thresh = 170) {
-  int max_theta = 360 / step;
-  int max_rho = std::ceil(sqrt(bin.cols * bin.cols + bin.rows * bin.rows));
+std::vector<float> thetas, rhos;
 
-  intersections = cv::Mat::zeros(max_theta, max_rho, CV_32F);
+bool withinMat(int x, int y, int cols, int rows) { return x >= 0 && x < cols && y >= 0 && y < rows; }
 
-  for (int y = 0; y < bin.rows; y++) {
-    for (int x = 0; x < bin.cols; x++) {
-      if (bin.at<uchar>(y, x) < thresh)
-        continue;
+void houghLines(cv::Mat bin, cv::Mat &acc, uchar thresh = 170) {
+  int max_theta = 180; 
+  int max_rho = std::ceil(sqrt(bin.cols*bin.cols + bin.rows*bin.rows));
 
-      float grad = ((float)(bin.at<uchar>(y, x) - thresh)) / (255 - thresh);
+  for (int t = -90; t < 90; ++t) {
+      thetas.push_back(radians(t));
+  }
 
-      for (int t = 0; t < max_theta; t++) {
-        float theta = radians(t * step);
-        int rho = int(x * cos(theta) + y * sin(theta));
+  for (int r = -max_rho; r < max_rho; ++r) {
+      rhos.push_back(r);
+  }
 
-        intersections.at<float>(t, rho) += 1;
+  acc = cv::Mat::zeros(max_theta, 2*max_rho, CV_32F);
+  
+  for (int y = 0; y < bin.rows; y++){
+      for(int x = 0; x < bin.cols; x++){
+          if (bin.at<uchar>(y,x) < thresh) continue;
+
+          for (int t = 0; t < max_theta; ++t) {
+              float theta = thetas[t];
+              int rho = int(x*cos(theta) + y*sin(theta));
+
+              int r = rho + max_rho;
+
+              // range of rho mapped from -max_rho : max_rho to 0 : 2max_rho
+              acc.at<float>(t, r) += 1.; 
+          }
       }
     }
-  }
 }
 
-void houghCircle(cv::Mat bin, cv::Mat &intersections) {
+void houghCircle(cv::Mat bin, cv::Mat &acc, uchar th) {
   // a, b, r
 
   int max_r = std::min(bin.cols, bin.rows);
-  int max_a = bin.cols;
-  int max_b = bin.rows;
-  uchar th = 170;
+    int max_a = bin.cols;
+    int max_b = bin.rows;
+    
+    int sizes[] {max_a, max_b, max_r};
+    
+    acc = cv::Mat::zeros(3, sizes, CV_32F);
+    
+    for (int y = 0; y < bin.rows; y++){
+        for(int x = 0; x < bin.cols; x++){
+            if (bin.at<uchar>(y,x) < th) continue;
 
-  int sizes[]{max_a, max_b, max_r};
-
-  intersections = cv::Mat::zeros(3, sizes, CV_8UC1);
-
-  for (int y = 0; y < bin.rows; y++) {
-    for (int x = 0; x < bin.cols; x++) {
-      if (bin.at<uchar>(y, x) < th)
-        continue;
-
-      float grad = ((float)(bin.at<uchar>(y, x) - th)) / (255 - th);
-
-      for (int a = 0; a < max_a; a++) {
-        for (int b = 0; b < max_b; b++) {
-          float da = a - x;
-          float db = b - y;
-          // Calculer directement r
-          float r = sqrt(da * da + db * db);
-          intersections.at<float>(a, b, r)++;
+            for (int a = 0; a < max_a; a++) {
+                for (int b = 0; b < max_b; b++) {
+                    float da = a - x;
+                    float db = b - y;
+                    // Calculer directement r
+                    float r = sqrt(da * da + db * db);
+                    acc.at<float>(a, b, r) += 1;
+                }
+            }
         }
-      }
     }
-  }
 }
 
-void color_pixel_region(cv::Mat &bin, cv::Mat &result,
+void incLineDir(cv::Mat & acc, float theta, int x, int y, int max_a, int max_b, int dir=1) 
+{
+    int r=1, a, b;
+    do {
+        a = x + dir*r*cos(theta); 
+        b = y + dir*r*sin(theta); 
+
+        if (withinMat(a, b, max_a, max_b)) {
+            acc.at<float>(b, a, r) += 1;
+        } else break;
+        ++r;
+    } while (true);
+}
+
+void houghCircleDirection(cv::Mat bin, cv::Mat & acc, cv::Mat const& dirs, uchar th) {
+
+    int max_r = sqrt(bin.rows*bin.rows+bin.cols*bin.cols);
+    int max_a = bin.cols;
+    int max_b = bin.rows;
+    
+    int sizes[] {max_b, max_a, max_r};
+    
+    acc = cv::Mat::zeros(3, sizes, CV_32F);
+    
+    for (int y = 0; y < bin.rows; y++){
+        for(int x = 0; x < bin.cols; x++){
+            if (bin.at<uchar>(y,x) < th) continue;
+
+            float theta = float(dirs.at<uchar>(y,x))*M_PI_4;
+
+            incLineDir(acc, theta, x, y, max_a, max_b);
+            incLineDir(acc, theta, x, y, max_a, max_b, -1);
+        }
+    }
+}
+
+void colorPixelRegion(cv::Mat &bin,
                         std::stack<cv::Point> &stack, int thresh,
-                        unsigned int x, unsigned int y) {
+                        unsigned int x, unsigned int y) 
+{
   unsigned int rows = bin.rows;
   unsigned int cols = bin.cols;
   bin.at<float>(y, x) = 0;
-  // result.at<uchar>(y, x) = 255;
 
   std::vector<cv::Point> neighbors = {
       {x - 1, y}, {x + 1, y}, {x, y - 1}, {x, y + 1}};
   for (auto neigh : neighbors) {
-    if (neigh.x >= 0 && neigh.x < cols && neigh.y >= 0 && neigh.y < rows) {
+    if (withinMat(neigh.x, neigh.y, cols, rows)) {
       if (bin.at<float>(neigh.y, neigh.x) > thresh) {
         bin.at<float>(neigh.y, neigh.x) = 0;
         stack.push({neigh.x, neigh.y});
@@ -85,81 +127,99 @@ void color_pixel_region(cv::Mat &bin, cv::Mat &result,
   }
 }
 
-std::vector<Region> get_regions(const cv::Mat &bin, float thresh1 = 0.4f,
-                                float thresh2 = 0.05f) {
-  cv::Mat img = bin.clone();
-  cv::Mat result = cv::Mat::zeros(bin.rows, bin.cols, bin.type());
+std::vector<Line> getLines(const cv::Mat &bin, float th1 = 0.4f, float th2 = 0.05f) 
+{
+  cv::Mat tmp = bin.clone();
 
-  std::vector<Region> regions;
-  // cv::Mat pixel2Region(bin.rows, bin.cols, CV_8UC1);
+  std::vector<Line> lines;
 
-  double max, min;
+  double max;
   cv::Point empty;
-  cv::minMaxLoc(bin, &min, &max, &empty, &empty);
+  cv::minMaxLoc(bin, nullptr, &max);
 
-  thresh1 *= max;
-  thresh2 *= max;
+  for (int y = 0; y < tmp.rows; y++){
+      for (int x = 0; x < tmp.cols; x++){
+          if (tmp.at<float>(y,x) < th1*max ) continue;
+          std::stack<cv::Point> stack;
+          stack.push({x, y});
+          Line line;
+          cv::Point2f barycenter={0.f,0.f};
+          int count=0;
 
-  for (int y = 0; y < img.rows; y++) {
-    for (int x = 0; x < img.cols; x++) {
+          while (!stack.empty()) { 
+              cv::Point p = stack.top();
+              stack.pop();
 
-      if (img.at<float>(y, x) > thresh1) {
-        std::stack<cv::Point> stack;
-        stack.push({x, y});
-        Region region;
+              barycenter += cv::Point2f(x, y);
+              count++;
 
-        while (!stack.empty()) {
-          cv::Point p = stack.top();
-          stack.pop();
-
-          region.center += cv::Point2f(x, y);
-          region.count++;
-
-          color_pixel_region(img, result, stack, thresh2, x, y);
-        }
-
-        region.center /= region.count;
-        regions.push_back(region);
+              colorPixelRegion(tmp, stack, th2*max, x, y);
+          }
+          
+          barycenter /= count;
+          line.theta = barycenter.y;
+          line.rho = barycenter.x;
+          lines.push_back(line);
       }
+  }
+
+  return lines;
+}
+
+std::vector<Line> accLocalExtremum(cv::Mat & acc) 
+{
+  std::vector<Line> extrema;
+  bool search = false;
+  for (int r = 0; r < acc.rows; ++r) {
+    for (int c = 0; c < acc.cols; ++c) {
+      float val = acc.at<float>(r, c);
+      if (val > 0) {
+        if (!search) {
+          search = true;
+          extrema.push_back({r, c});
+        } else {
+          Line line = extrema[extrema.size()-1];
+          if (val > acc.at<float>(line.theta, line.rho)) {
+            extrema[extrema.size()-1] = {r, c};
+          }
+        }
+      } else search = false;
     }
   }
 
-  return regions;
+  return extrema;
 }
 
-void intersect_img(cv::Mat const &bin, cv::Mat const &lns, cv::Mat &dst) {
+void intersectImg(cv::Mat const &bin, cv::Mat const &lns, cv::Mat &dst) {
   assert(bin.type() == lns.type());
   dst = lns.clone();
   int rows = bin.rows;
   int cols = bin.cols;
   for (int r = 0; r < rows; ++r) {
     for (int c = 0; c < cols; ++c) {
-      if (dst.at<uchar>(r, c) != 255)
-        continue;
+      if (dst.at<uchar>(r, c) != 255) continue;
       dst.at<uchar>(r, c) = (bin.at<uchar>(r, c) == 255) ? 255 : 0;
     }
   }
 }
 
-void draw_local_maximums(const std::vector<Region> &regions, cv::Mat &out) {
-  for (auto &region : regions) {
-    cv::drawMarker(out, region.center, {255, 0, 0}, 1, 10);
+void drawLocalExtrema(const std::vector<Line> &lines, cv::Mat &out) {
+  for (auto &line : lines) {
+    cv::drawMarker(out, {line.rho, line.theta}, {255, 0, 0}, 1, 10);
   }
 }
 
-void draw_lines(const std::vector<Region> &regions, cv::Mat &hough_lines) {
-  for (auto &region : regions) {
-    int x = region.center.x;
-    int y = region.center.y;
-
-    float rho = x;
-    float theta = radians(y * step);
+void drawLines(const std::vector<Line> &lines, cv::Mat &hough_lines) {
+  for (auto &line : lines) {
+    float theta = thetas[line.theta];
+    float rho = rhos[line.rho];
 
     float a = cos(theta);
     float b = sin(theta);
 
-    int x0 = a * rho;
-    int y0 = b * rho;
+    int x0 = rho * a;
+    int y0 = rho * b;
+
     int x1 = int(x0 + 1000 * (-b));
     int y1 = int(y0 + 1000 * (a));
     int x2 = int(x0 - 1000 * (-b));

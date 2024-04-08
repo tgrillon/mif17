@@ -47,8 +47,9 @@ public:
 //
 class DemoHoughLinesGrad : public DemoHoughLinesBase {
 private:
-  int hough_thresh = 0, multi_dim = 1, compute = 0, invert = 0;
-  int regThresh1 = 4, regThresh2 = 1, grad = 1;
+  int hough_thresh = 255, multi_dim = 1, compute = 0, invert = 0;
+  int regThresh1 = 50, regThresh2 = 1, grad = 1;
+  int sh = 24, sb = 4;
 
 public:
   DemoHoughLinesGrad(const cv::Mat &img) : DemoHoughLinesBase(img) {}
@@ -63,12 +64,15 @@ public:
       img = this->img;
 
     if (grad)
-      result = houghLinesWithGradient(img, hough_thresh,
+      result = houghLinesWithGradient(img, sh, sb, hough_thresh,
                                       multi_dim ? Dimension::MULTI_DIM
                                                 : Dimension::TWO_DIM,
-                                      regThresh1, regThresh2);
-    else
+                                     regThresh1, regThresh2);
+    else {
+      cv::Mat edge;
+      cv::Canny(img, edge, 200, 50);
       result = houghLinesFromBin(img, hough_thresh, regThresh1, regThresh2);
+    }
     window();
   }
 
@@ -94,6 +98,10 @@ public:
                        compute_fn, this);
     cv::createTrackbar("reg_thresh_neigh", "base", &regThresh2, 100, compute_fn,
                        this);
+    cv::createTrackbar("sh hysteresis", "base", &sh, 255, compute_fn,
+                      this);
+    cv::createTrackbar("sb hysteresis", "base", &sb, 255, compute_fn,
+                      this);
     cv::createTrackbar("Compute on changes (key 'R' = compute)", "base",
                        &compute, 1, compute_fn, this);
 

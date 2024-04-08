@@ -6,32 +6,35 @@ struct HoughLinesResult {
   cv::Mat inter, regimg, hough_lines, final;
 };
 
-HoughLinesResult houghLinesFromBin(const cv::Mat &img, uchar houghThresh = 170,
+HoughLinesResult houghLinesFromBin(const cv::Mat &img,
+                                    uchar houghThresh = 170,
                                    float regthresh1 = 0.4f,
-                                   float regThresh2 = 0.1f) {
+                                   float regThresh2 = 0.1f) 
+{
   HoughLinesResult result;
-  cv::Mat intersect;
+  cv::Mat accumulator;
 
-  houghLines(img, intersect, houghThresh);
+  houghLines(img, accumulator, houghThresh);  
 
   result.hough_lines = cv::Mat::zeros(img.rows, img.cols, CV_8UC1);
-  result.regimg = cv::Mat::zeros(intersect.rows, intersect.cols, CV_8UC3);
-  result.final = cv::Mat::zeros(img.rows, img.cols, CV_8UC1);
+  result.regimg = cv::Mat::zeros(accumulator.rows, accumulator.cols, CV_8UC3);
+  result.final = img;//cv::Mat::zeros(img.rows, img.cols, CV_8UC1);
 
-  auto regions = get_regions(intersect, regthresh1, regThresh2);
-  draw_local_maximums(regions, result.regimg);
-  draw_lines(regions, result.hough_lines);
+  auto lines = getLines(accumulator, regthresh1, regThresh2);
+  drawLocalExtrema(lines, result.regimg);
+  drawLines(lines, result.hough_lines);
 
   double min, max;
-  minmax(intersect, &min, &max);
-  intersect.convertTo(result.inter, CV_8UC1, 255 / max);
+  minmax(accumulator, &min, &max);
+  accumulator.convertTo(result.inter, CV_8UC1, 255 / max);
 
-  intersect_img(img, result.hough_lines, result.final);
+  // intersectImg(img, result.hough_lines, result.final);
 
   return result;
 }
 
 HoughLinesResult houghLinesWithGradient(const cv::Mat &img,
+                                        uchar sh, uchar sb,
                                         uchar houghThresh = 170,
                                         Dimension dim = MULTI_DIM,
                                         float regthresh1 = 0.4f,
@@ -42,12 +45,12 @@ HoughLinesResult houghLinesWithGradient(const cv::Mat &img,
   cv::Mat h(3, 3, CV_32F, const_cast<float *>(kernel::kirsch));
 
   std::vector<cv::Mat> grds;
-  grds = compute_gradients(img, h, dim);
+  grds = computeGradients(img, h, dim);
 
   cv::Mat mgs, drs, fnl;
   magnitude(grds, mgs, drs);
 
-  hysteresis(mgs, fnl, 24, 4);
+  hysteresis(mgs, fnl, sh, sb);
 
   return houghLinesFromBin(fnl, houghThresh, regthresh1, regThresh2);
 }

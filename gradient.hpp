@@ -8,7 +8,7 @@ enum Dimension {
     MULTI_DIM=4
 };
 
-std::vector<cv::Mat> compute_gradients(const cv::Mat& src, const cv::Mat& h, Dimension dim=MULTI_DIM)
+std::vector<cv::Mat> computeGradients(const cv::Mat& src, const cv::Mat& h, Dimension dim=MULTI_DIM)
 {
     assert(h.rows == 3 && h.cols == 3);
     int height = src.rows;
@@ -64,7 +64,7 @@ void magnitude(std::vector<cv::Mat> const& grds, cv::Mat & mgs, cv::Mat & drs)
     }
 }
 
-bool check_neighbors(cv::Mat const& img, unsigned int r, unsigned int c) 
+bool checkNeighbors(cv::Mat const& img, unsigned int r, unsigned int c) 
 {
     for (int i = -1; i < 1; ++i) {
         for (int j = -1; j < 1; ++j) {
@@ -98,7 +98,7 @@ void hysteresis(cv::Mat const& src, cv::Mat & dst, uchar sh, uchar sb)
         for (int c = 1; c < cols-1; ++c) {
             uchar val = src.at<uchar>(r, c);
             if (val <= sh && val > sb) {
-                if (check_neighbors(dst, r, c)) {
+                if (checkNeighbors(dst, r, c)) {
                     dst.at<uchar>(r, c) = 255;
                 }
             }

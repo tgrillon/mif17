@@ -31,16 +31,15 @@ namespace kernel
     {
         cv::Mat rt = h.clone();
         float bff = rt.at<float>(0, 0);
-        rt.at<float>(0, 0) = rt.at<float>(0, 1);
-        rt.at<float>(0, 1) = rt.at<float>(0, 2);
-
-        rt.at<float>(0, 2) = rt.at<float>(1, 2);
-        rt.at<float>(1, 2) = rt.at<float>(2, 2);
-        rt.at<float>(2, 2) = rt.at<float>(2, 1);
-
-        rt.at<float>(2, 1) = rt.at<float>(2, 0);
-        rt.at<float>(2, 0) = rt.at<float>(1, 0);
-        rt.at<float>(1, 0) = bff;
+        rt.at<float>(0, 0) = rt.at<float>(1, 0);
+        rt.at<float>(1, 0) = rt.at<float>(2, 0);
+        rt.at<float>(2, 0) = rt.at<float>(2, 1);
+        rt.at<float>(2, 1) = rt.at<float>(2, 2);
+        rt.at<float>(2, 2) = rt.at<float>(1, 2);
+        rt.at<float>(1, 2) = rt.at<float>(0, 2);
+        rt.at<float>(0, 2) = rt.at<float>(0, 1);
+        rt.at<float>(0, 1) = rt.at<float>(0, 0);
+        rt.at<float>(0, 1) = bff;
 
         return rt;
     }
