@@ -4,6 +4,7 @@
 #include <stack>
 
 struct Line {
+    cv::Point2i position_in_acc;
     float theta=0.f;
     float rho=0.f;
 };
@@ -16,7 +17,7 @@ void houghLines(cv::Mat bin, cv::Mat &acc, uchar thresh = 170) {
   int max_theta = 180; 
   int max_rho = std::ceil(sqrt(bin.cols*bin.cols + bin.rows*bin.rows));
 
-  for (int t = 0; t < 180; ++t) {
+  for (int t = 0; t <= 180; ++t) {
       thetas.push_back(radians(t));
   }
 
@@ -42,47 +43,72 @@ void houghLines(cv::Mat bin, cv::Mat &acc, uchar thresh = 170) {
       }
     }
 }
+void houghLines(cv::Mat bin, cv::Mat &acc, cv::Mat &dirs, uchar thresh = 170) {
+  int max_theta = 180; 
+  int max_rho = std::ceil(sqrt(bin.cols*bin.cols + bin.rows*bin.rows));
+
+  acc = cv::Mat::zeros(max_theta+1, 2*max_rho, CV_32F);
+  
+  for (int y = 0; y < bin.rows; y++){
+      for(int x = 0; x < bin.cols; x++){
+          if (bin.at<uchar>(y,x) < thresh) continue;
+
+          float theta = dirs.at<float>(y,x) + radians(90);
+
+          if (theta < 0)
+            theta = radians(180) + theta;
+          else if (theta > radians(180))
+            theta = theta - radians(180);
+
+          int rho = int(x*cos(theta) + y*sin(theta));
+
+          int r = rho + max_rho;
+          // range of rho mapped from -max_rho : max_rho to 0 : 2max_rho
+          float t = degrees(theta);
+          acc.at<float>(degrees(theta), r) += 1.; 
+      }
+    }
+}
 
 void houghCircle(cv::Mat bin, cv::Mat &acc, uchar th) {
   // a, b, r
 
   int max_r = std::min(bin.cols, bin.rows);
-    int max_a = bin.cols;
-    int max_b = bin.rows;
-    
-    int sizes[] {max_a, max_b, max_r};
-    
-    acc = cv::Mat::zeros(3, sizes, CV_32F);
-    
-    for (int y = 0; y < bin.rows; y++){
-        for(int x = 0; x < bin.cols; x++){
-            if (bin.at<uchar>(y,x) < th) continue;
+  int max_a = bin.cols;
+  int max_b = bin.rows;
+  
+  int sizes[] {max_a, max_b, max_r};
+  
+  acc = cv::Mat::zeros(3, sizes, CV_32F);
+  
+  for (int y = 0; y < bin.rows; y++){
+      for(int x = 0; x < bin.cols; x++){
+          if (bin.at<uchar>(y,x) < th) continue;
 
-            for (int a = 0; a < max_a; a++) {
-                for (int b = 0; b < max_b; b++) {
-                    float da = a - x;
-                    float db = b - y;
-                    // Calculer directement r
-                    float r = sqrt(da * da + db * db);
-                    acc.at<float>(a, b, r) += 1;
-                }
-            }
-        }
-    }
+          for (int a = 0; a < max_a; a++) {
+              for (int b = 0; b < max_b; b++) {
+                  float da = a - x;
+                  float db = b - y;
+                  // Calculer directement r
+                  float r = sqrt(da * da + db * db);
+                  acc.at<float>(a, b, r) += 1;
+              }
+          }
+      }
+  }
 }
-
 void incLineDir(cv::Mat & acc, float theta, int x, int y, int max_a, int max_b, int dir=1) 
 {
-    int r=1, a, b;
-    do {
-        a = x + dir*r*cos(theta); 
-        b = y + dir*r*sin(theta); 
+  int r=1, a, b;
+  do {
+      a = x + dir*r*cos(theta); 
+      b = y + dir*r*sin(theta); 
 
-        if (withinMat(a, b, max_a, max_b)) {
-            acc.at<float>(b, a, r) += 1;
-        } else break;
-        ++r;
-    } while (true);
+      if (withinMat(a, b, max_a, max_b)) {
+          acc.at<float>(b, a, r) += 1;
+      } else break;
+      ++r;
+  } while (true);
 }
 
 void houghCircleDirection(cv::Mat bin, cv::Mat & acc, cv::Mat const& dirs, uchar th) {
@@ -99,7 +125,7 @@ void houghCircleDirection(cv::Mat bin, cv::Mat & acc, cv::Mat const& dirs, uchar
         for(int x = 0; x < bin.cols; x++){
             if (bin.at<uchar>(y,x) < th) continue;
 
-            float theta = float(dirs.at<uchar>(y,x))*M_PI_4;
+            float theta = dirs.at<float>(y,x);
 
             incLineDir(acc, theta, x, y, max_a, max_b);
             incLineDir(acc, theta, x, y, max_a, max_b, -1);
@@ -131,6 +157,7 @@ std::vector<Line> getLines(const cv::Mat &bin, float th1 = 0.4f, float th2 = 0.0
 {
   cv::Mat tmp = bin.clone();
 
+  int max_rho = std::ceil(sqrt(bin.cols*bin.cols + bin.rows*bin.rows));
   std::vector<Line> lines;
 
   double max;
@@ -150,15 +177,17 @@ std::vector<Line> getLines(const cv::Mat &bin, float th1 = 0.4f, float th2 = 0.0
               cv::Point p = stack.top();
               stack.pop();
 
-              barycenter += cv::Point2f(x, y);
-              count++;
+              barycenter += cv::Point2f(x, y); 
 
               colorPixelRegion(tmp, stack, th2*max, x, y);
+              
+              ++count;
           }
           
           barycenter /= count;
-          line.theta = barycenter.y;
-          line.rho = barycenter.x;
+          line.theta = radians(barycenter.y);
+          line.rho = barycenter.x - max_rho;
+          line.position_in_acc = {barycenter.x, barycenter.y};
           lines.push_back(line);
       }
   }
@@ -166,29 +195,29 @@ std::vector<Line> getLines(const cv::Mat &bin, float th1 = 0.4f, float th2 = 0.0
   return lines;
 }
 
-std::vector<Line> accLocalExtremum(cv::Mat & acc) 
-{
-  std::vector<Line> extrema;
-  bool search = false;
-  for (int r = 0; r < acc.rows; ++r) {
-    for (int c = 0; c < acc.cols; ++c) {
-      float val = acc.at<float>(r, c);
-      if (val > 0) {
-        if (!search) {
-          search = true;
-          extrema.push_back({r, c});
-        } else {
-          Line line = extrema[extrema.size()-1];
-          if (val > acc.at<float>(line.theta, line.rho)) {
-            extrema[extrema.size()-1] = {r, c};
-          }
-        }
-      } else search = false;
-    }
-  }
+// std::vector<Line> accLocalExtremum(cv::Mat & acc) 
+// {
+//   std::vector<Line> extrema;
+//   bool search = false;
+//   for (int r = 0; r < acc.rows; ++r) {
+//     for (int c = 0; c < acc.cols; ++c) {
+//       float val = acc.at<float>(r, c);
+//       if (val > 0) {
+//         if (!search) {
+//           search = true;
+//           extrema.push_back({r, c});
+//         } else {
+//           Line line = extrema[extrema.size()-1];
+//           if (val > acc.at<float>(line.theta, line.rho)) {
+//             extrema[extrema.size()-1] = {r, c};
+//           }
+//         }
+//       } else search = false;
+//     }
+//   }
 
-  return extrema;
-}
+//   return extrema;
+// }
 
 void intersectImg(cv::Mat const &bin, cv::Mat const &lns, cv::Mat &dst) {
   assert(bin.type() == lns.type());
@@ -205,14 +234,14 @@ void intersectImg(cv::Mat const &bin, cv::Mat const &lns, cv::Mat &dst) {
 
 void drawLocalExtrema(const std::vector<Line> &lines, cv::Mat &out) {
   for (auto &line : lines) {
-    cv::drawMarker(out, {line.rho, line.theta}, {255, 0, 0}, 1, 10);
+    cv::drawMarker(out, {line.position_in_acc.y, line.position_in_acc.x}, {255, 0, 0}, 1, 10);
   }
 }
 
 void drawLines(const std::vector<Line> &lines, cv::Mat &hough_lines) {
   for (auto &line : lines) {
-    float theta = thetas[line.theta];
-    float rho = rhos[line.rho];
+    float theta = line.theta;
+    float rho = line.rho;
 
     float a = cos(theta);
     float b = sin(theta);
@@ -229,6 +258,20 @@ void drawLines(const std::vector<Line> &lines, cv::Mat &hough_lines) {
   }
 }
 
+
+void drawCircles(cv::Mat const& src, cv::Mat & dst, cv::Mat const& acc, uchar th) 
+{
+  dst = cv::Mat::zeros(src.size(), CV_8UC3);
+  for (int b = 0; b < acc.size[0]; ++b) {
+        for (int a = 0; a < acc.size[1]; ++a) {
+            for (int r = 0; r < acc.size[2]; ++r) {
+                if (cv::saturate_cast<uchar>(acc.at<float>(b, a, r)) < th) continue;
+                cv::circle(dst, cv::Point(a, b), r, {255, 0, 0}, 3);
+                cv::drawMarker(dst, cv::Point(a, b), {255, 0, 0}, 1, 10);
+            }
+        }
+    }
+}
 
 
 /*

@@ -5,6 +5,11 @@
 
 float radians(float a) { return M_PI/180 * a; }
 
+float degrees(float a) {   
+    return 180/M_PI * a; 
+}
+
+
 cv::Mat calcHistCumul(const cv::Mat& src, int histSize) {
     cv::Mat dst = cv::Mat::zeros(src.size(), src.type());
     dst.at<float>(0) = src.at<float>(0);

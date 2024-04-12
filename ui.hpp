@@ -30,8 +30,9 @@ public:
   void window() override {
     cv::imshow("img", img);
     cv::imshow("intersect", result.inter);
+    cv::imshow("edges", result.edges);
     cv::imshow("regimg", result.regimg);
-    cv::imshow("hough", result.hough_lines);
+    cv::imshow("hough", result.lines);
     cv::imshow("final", result.final);
   }
 };
@@ -47,7 +48,7 @@ public:
 //
 class DemoHoughLinesGrad : public DemoHoughLinesBase {
 private:
-  int hough_thresh = 255, multi_dim = 1, compute = 0, invert = 0;
+  int bin_thresh  = 255, multi_dim = 1, compute = 0, invert = 0;
   int regThresh1 = 50, regThresh2 = 1, grad = 1;
   int sh = 24, sb = 4;
 
@@ -63,21 +64,22 @@ public:
     else
       img = this->img;
 
-    if (grad)
-      result = houghLinesWithGradient(img, sh, sb, hough_thresh,
+    if (grad) {
+      result = houghLinesWithGradient(img, sh, sb, bin_thresh ,
                                       multi_dim ? Dimension::MULTI_DIM
                                                 : Dimension::TWO_DIM,
                                      regThresh1, regThresh2);
-    else {
+    } else {
       cv::Mat edge;
       cv::Canny(img, edge, 200, 50);
-      result = houghLinesFromBin(img, hough_thresh, regThresh1, regThresh2);
+      result = houghLinesFromBin(img, bin_thresh , regThresh1, regThresh2);
     }
     window();
   }
 
   void configure_window() override {
-    cv::namedWindow("base");
+    std::string title = "Hough Line Demo Config";
+    cv::namedWindow(title);
 
     auto compute_fn = [](int, void *user) {
       DemoHoughLinesGrad *bthis = static_cast<DemoHoughLinesGrad *>(user);
@@ -86,29 +88,117 @@ public:
       }
     };
 
-    cv::createTrackbar("hough_thresh", "base", &hough_thresh, 255, compute_fn,
+    cv::createTrackbar("bin_thresh ", title, &bin_thresh , 255, compute_fn,
                        this);
-    cv::createTrackbar("bin only / with grad", "base", &grad, 1, compute_fn,
+    cv::createTrackbar("bin only / with grad", title, &grad, 1, compute_fn,
                        this);
-    cv::createTrackbar("bin_only_invert_input", "base", &invert, 1, compute_fn,
+    cv::createTrackbar("bin_only_invert_input", title, &invert, 1, compute_fn,
                        this);
-    cv::createTrackbar("grad_multi_dim", "base", &multi_dim, 1, compute_fn,
+    cv::createTrackbar("grad_multi_dim", title, &multi_dim, 1, compute_fn,
                        this);
-    cv::createTrackbar("ref_thresh_initial", "base", &regThresh1, 100,
+    cv::createTrackbar("reg_thresh_initial", title, &regThresh1, 100,
                        compute_fn, this);
-    cv::createTrackbar("reg_thresh_neigh", "base", &regThresh2, 100, compute_fn,
+    cv::createTrackbar("reg_thresh_neigh", title, &regThresh2, 100, compute_fn,
                        this);
-    cv::createTrackbar("sh hysteresis", "base", &sh, 255, compute_fn,
+    cv::createTrackbar("sh hysteresis", title, &sh, 255, compute_fn,
                       this);
-    cv::createTrackbar("sb hysteresis", "base", &sb, 255, compute_fn,
+    cv::createTrackbar("sb hysteresis", title, &sb, 255, compute_fn,
                       this);
-    cv::createTrackbar("Compute on changes (key 'R' = compute)", "base",
+    cv::createTrackbar("Compute on changes (key 'R' = compute)", title,
                        &compute, 1, compute_fn, this);
 
     while (true) {
       switch (cv::waitKey()) {
       case 'r':
         this->process();
+        std::cout << "Done!" << std::endl;
+        break;
+
+      case 27:
+        return;
+      }
+    }
+  }
+};
+
+class DemoHoughCirclesBase : public Viewer {
+protected:
+  HoughCirclesResult result;
+  cv::Mat img;
+
+public:
+  DemoHoughCirclesBase(const cv::Mat &img) : img(img) {}
+
+  void window() override {
+    cv::imshow("img", img);
+    cv::imshow("edges", result.edges);
+    cv::imshow("hough", result.circles);
+  }
+};
+
+class DemoHoughCirclesGrad : public DemoHoughCirclesBase {
+private:
+  int bin_thresh  = 255, circle_thresh = 5;
+  int multi_dim = 1, compute = 0, invert = 0, grad = 1;
+  int sh = 24, sb = 4;
+
+public:
+  DemoHoughCirclesGrad(const cv::Mat &img) : DemoHoughCirclesBase(img) {}
+
+  void process() override {
+    cv::Mat img;
+    if (invert && !grad)
+      cv::bitwise_not(this->img, img);
+    else
+      img = this->img;
+
+    if (grad) {
+      result = houghCirclesWithGradient(img, sh, sb, 
+                                      bin_thresh, circle_thresh, 
+                                      multi_dim ? Dimension::MULTI_DIM
+                                                : Dimension::TWO_DIM
+                                     );
+    } else {
+      // cv::Mat edge;
+      // cv::Canny(img, edge, 200, 50);
+      result = houghCirclesFromBin(img, bin_thresh, circle_thresh);
+    }
+    window();
+  }
+
+  void configure_window() override {
+    std::string title = "Hough Circle Demo Config";
+    cv::namedWindow(title);
+
+    auto compute_fn = [](int, void *user) {
+      DemoHoughCirclesGrad *bthis = static_cast<DemoHoughCirclesGrad *>(user);
+      if (bthis->compute) {
+        bthis->process();
+      }
+    };
+
+    cv::createTrackbar("bin_thresh ", title, &bin_thresh , 255, compute_fn,
+                       this);
+    cv::createTrackbar("bin only / with grad", title, &grad, 1, compute_fn,
+                       this);
+    cv::createTrackbar("bin_only_invert_input", title, &invert, 1, compute_fn,
+                       this);
+    cv::createTrackbar("grad_multi_dim", title, &multi_dim, 1, compute_fn,
+                       this);
+    cv::createTrackbar("circle thresh", title, &circle_thresh, 100, compute_fn,
+                       this);
+    cv::createTrackbar("sh hysteresis", title, &sh, 255, compute_fn,
+                      this);
+    cv::createTrackbar("sb hysteresis", title, &sb, 255, compute_fn,
+                      this);
+    cv::createTrackbar("Compute on changes (key 'R' = compute)", title,
+                       &compute, 1, compute_fn, this);
+
+    while (true) {
+      switch (cv::waitKey()) {
+      case 'r':
+        this->process();
+        std::cout << "Done!" << std::endl;
         break;
 
       case 27:
