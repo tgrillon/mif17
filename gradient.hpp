@@ -40,26 +40,45 @@ std::vector<cv::Mat> computeGradients(const cv::Mat& src, const cv::Mat& h, Dime
     return grds;
 }
 
-void magnitude(std::vector<cv::Mat> const& grds, cv::Mat & mgs, cv::Mat & drs)
+void magnitudeBD(std::vector<cv::Mat> const& grds, cv::Mat & mgs, cv::Mat & drs)
 {
-    mgs = cv::Mat::zeros(grds[0].size(), CV_8UC1);
-    drs = cv::Mat::zeros(grds[0].size(), CV_8UC1);
+    mgs = cv::Mat::zeros(grds[0].size(), CV_32F);
+    drs = cv::Mat::zeros(grds[0].size(), CV_32F);
     int rows = grds[0].rows;
     int cols = grds[0].cols;
     for (int r = 1; r < rows-1; ++r) {
         for (int c = 1; c < cols-1; ++c) {
-            uchar sup = grds[0].at<uchar>(r, c);
-            int dir = 0;
+            float gx = float(grds[0].at<uchar>(r, c));
+            float gy = float(grds[1].at<uchar>(r, c));
+            float mag = sqrt(gx*gx+gy*gy);
+            float dir = atan2(gy, gx);
+
+            mgs.at<float>(r, c) = mag;
+            drs.at<float>(r, c) = dir;
+        }
+    }
+}
+
+void magnitudeMD(std::vector<cv::Mat> const& grds, cv::Mat & mgs, cv::Mat & drs)
+{
+    mgs = cv::Mat::zeros(grds[0].size(), CV_32F);
+    drs = cv::Mat::zeros(grds[0].size(), CV_32F);
+    int rows = grds[0].rows;
+    int cols = grds[0].cols;
+    for (int r = 1; r < rows-1; ++r) {
+        for (int c = 1; c < cols-1; ++c) {
+            float sup = float(grds[0].at<uchar>(r, c));
+            float dir = 0.f;
             for (int k = 1; k < grds.size(); ++k) {
-                uchar tmp = grds[k].at<uchar>(r, c);
+                float tmp = float(grds[k].at<uchar>(r, c));
                 if (tmp > sup) {
                     sup = tmp;
                     dir = k;
                 }
             }
-            uchar val = sup;
-            mgs.at<uchar>(r, c) = val;
-            drs.at<uchar>(r, c) = dir;
+            float val = sup;
+            mgs.at<float>(r, c) = val;
+            drs.at<float>(r, c) = dir*M_PI_4;
         }
     }
 }
@@ -106,19 +125,26 @@ void hysteresis(cv::Mat const& src, cv::Mat & dst, uchar sh, uchar sb)
     }
 }
 
-void direction(cv::Mat const& src, cv::Mat & dst, cv::Mat const& drs)
+void direction(cv::Mat const& mgs, cv::Mat & dst, cv::Mat const& drs)
 {
-    dst = cv::Mat::zeros(src.size(), CV_8UC3);
-    int rows = src.rows;
-    int cols = src.cols;
+    assert(mgs.type() == CV_8UC1);
+    dst = cv::Mat::zeros(mgs.size(), CV_8UC3);
+    int rows = mgs.rows;
+    int cols = mgs.cols;
     for (int r = 1; r < rows-1; ++r) {
         for (int c = 1; c < cols - 1; ++c) {
-            uchar val = src.at<uchar>(r, c);
-            uchar dir = drs.at<uchar>(r, c);
-            dst.at<cv::Vec3b>(r, c) = {val, 0, 0};
-            if (dir == 1) dst.at<cv::Vec3b>(r, c) = {0, val, 0};
-            else if (dir == 2) dst.at<cv::Vec3b>(r, c) = {0, 0, val};
-            else if (dir == 3) dst.at<cv::Vec3b>(r, c) = {val, 0, val};
+            uchar mg = mgs.at<uchar>(r, c);
+            float dir = drs.at<float>(r, c)*100.f;
+            dst.at<cv::Vec3b>(r, c) = {mg, 0, 0};
+            if (dir > 0) {
+                if (dir < 80) {
+                    dst.at<cv::Vec3b>(r, c) = {0, mg, 0};
+                } else if (dir < 160) {
+                    dst.at<cv::Vec3b>(r, c) = {0, 0, mg};
+                } else {
+                    dst.at<cv::Vec3b>(r, c) = {0, mg, mg};
+                }
+            }
         }
     }
 }

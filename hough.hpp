@@ -16,7 +16,7 @@ void houghLines(cv::Mat bin, cv::Mat &acc, uchar thresh = 170) {
   int max_theta = 180; 
   int max_rho = std::ceil(sqrt(bin.cols*bin.cols + bin.rows*bin.rows));
 
-  for (int t = -90; t < 90; ++t) {
+  for (int t = 0; t < 180; ++t) {
       thetas.push_back(radians(t));
   }
 
@@ -228,6 +228,8 @@ void drawLines(const std::vector<Line> &lines, cv::Mat &hough_lines) {
     cv::line(hough_lines, cv::Point(x1, y1), cv::Point(x2, y2), 255, 1);
   }
 }
+
+
 
 /*
 *

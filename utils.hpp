@@ -1,5 +1,6 @@
 #pragma once
 #include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 
 float radians(float a) { return M_PI/180 * a; }
