@@ -19,10 +19,11 @@ HoughLinesResult houghLinesFromBin(const cv::Mat &img,
   HoughLinesResult result;
   cv::Mat acc;
 
-  if (dirs.empty())
+  if (dirs.empty()) {
     houghLines(img, acc, binThresh);  
-  else 
+  } else {
     houghLines(img, acc, dirs, binThresh);  
+  }
 
   result.lines = cv::Mat::zeros(img.rows, img.cols, CV_8UC1);
   result.regimg = cv::Mat::zeros(acc.rows, acc.cols, CV_8UC3);

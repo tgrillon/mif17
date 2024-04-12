@@ -11,19 +11,13 @@ struct Line {
 
 std::vector<float> thetas, rhos;
 
+int max_rho;
+
 bool withinMat(int x, int y, int cols, int rows) { return x >= 0 && x < cols && y >= 0 && y < rows; }
 
 void houghLines(cv::Mat bin, cv::Mat &acc, uchar thresh = 170) {
   int max_theta = 180; 
-  int max_rho = std::ceil(sqrt(bin.cols*bin.cols + bin.rows*bin.rows));
-
-  for (int t = 0; t <= 180; ++t) {
-      thetas.push_back(radians(t));
-  }
-
-  for (int r = -max_rho; r < max_rho; ++r) {
-      rhos.push_back(r);
-  }
+  max_rho = std::ceil(sqrt(bin.cols*bin.cols + bin.rows*bin.rows));
 
   acc = cv::Mat::zeros(max_theta, 2*max_rho, CV_32F);
   
@@ -32,7 +26,7 @@ void houghLines(cv::Mat bin, cv::Mat &acc, uchar thresh = 170) {
           if (bin.at<uchar>(y,x) < thresh) continue;
 
           for (int t = 0; t < max_theta; ++t) {
-              float theta = thetas[t];
+              float theta = radians(t);
               int rho = int(x*cos(theta) + y*sin(theta));
 
               int r = rho + max_rho;
@@ -45,7 +39,7 @@ void houghLines(cv::Mat bin, cv::Mat &acc, uchar thresh = 170) {
 }
 void houghLines(cv::Mat bin, cv::Mat &acc, cv::Mat &dirs, uchar thresh = 170) {
   int max_theta = 180; 
-  int max_rho = std::ceil(sqrt(bin.cols*bin.cols + bin.rows*bin.rows));
+  max_rho = std::ceil(sqrt(bin.cols*bin.cols + bin.rows*bin.rows));
 
   acc = cv::Mat::zeros(max_theta+1, 2*max_rho, CV_32F);
   
@@ -53,7 +47,7 @@ void houghLines(cv::Mat bin, cv::Mat &acc, cv::Mat &dirs, uchar thresh = 170) {
       for(int x = 0; x < bin.cols; x++){
           if (bin.at<uchar>(y,x) < thresh) continue;
 
-          float theta = dirs.at<float>(y,x) + radians(90);
+          float theta = dirs.at<float>(y,x);
 
           if (theta < 0)
             theta = radians(180) + theta;
@@ -64,7 +58,6 @@ void houghLines(cv::Mat bin, cv::Mat &acc, cv::Mat &dirs, uchar thresh = 170) {
 
           int r = rho + max_rho;
           // range of rho mapped from -max_rho : max_rho to 0 : 2max_rho
-          float t = degrees(theta);
           acc.at<float>(degrees(theta), r) += 1.; 
       }
     }
@@ -157,7 +150,6 @@ std::vector<Line> getLines(const cv::Mat &bin, float th1 = 0.4f, float th2 = 0.0
 {
   cv::Mat tmp = bin.clone();
 
-  int max_rho = std::ceil(sqrt(bin.cols*bin.cols + bin.rows*bin.rows));
   std::vector<Line> lines;
 
   double max;
@@ -234,7 +226,7 @@ void intersectImg(cv::Mat const &bin, cv::Mat const &lns, cv::Mat &dst) {
 
 void drawLocalExtrema(const std::vector<Line> &lines, cv::Mat &out) {
   for (auto &line : lines) {
-    cv::drawMarker(out, {line.position_in_acc.y, line.position_in_acc.x}, {255, 0, 0}, 1, 10);
+    cv::drawMarker(out, {line.position_in_acc.x, line.position_in_acc.y}, {255, 0, 0}, 1, 10);
   }
 }
 

@@ -18,31 +18,32 @@ int main(int argc, char **argv) {
   cv::Mat img;
   img = cv::imread(filepath, cv::IMREAD_GRAYSCALE);
 
-      viewer = new DemoHoughLinesGrad(img);
-
-  if (false) {
-    std::string mode = argv[1];
-
-    if (mode.compare("lines") == 0)
-      viewer = new DemoHoughLinesGrad(img);
-    else if (mode.compare("circles") == 0)
-      viewer = new DemoHoughCirclesGrad(img);
-    else{
-      std::cerr << "Invalid argument for viewer mode";
-      return -1;
-    }
-    
-
-  }
-
   if (!img.data) {
     printf("No image data \n");
     return -1;
   } 
-  
+
   int bf = 29, md = 7;
   cv::Mat flt, tmp;
-  // cv::bilateralFilter(img, tmp, bf, bf, bf);
+  cv::bilateralFilter(img, flt, bf, bf, bf);
+
+      // viewer = new DemoHoughLinesGrad(flt);
+
+  if (argc > 1) {
+    std::string mode = argv[1];
+
+    if (mode.compare("lines") == 0)
+      viewer = new DemoHoughLinesGrad(flt);
+    else if (mode.compare("circles") == 0)
+      viewer = new DemoHoughCirclesGrad(flt);
+    else{
+      std::cerr << "Invalid argument for viewer mode";
+      return -1;
+    }
+  }
+
+  
+  
   // cv::medianBlur(img, flt, md); 
 
   viewer->show();
