@@ -2,6 +2,7 @@
 #include "gradient.hpp"
 #include "hough.hpp"
 #include "kernel.hpp"
+#include <chrono>
 struct HoughLinesResult {
   cv::Mat inter, edges, regimg, lines, final;
 };
@@ -10,19 +11,17 @@ struct HoughCirclesResult {
   cv::Mat inter, edges, circles, final;
 };
 
-HoughLinesResult houghLinesFromBin(const cv::Mat &img,
-                                    uchar binThresh  = 170,
+HoughLinesResult houghLinesFromBin(const cv::Mat &img, uchar binThresh = 170,
                                    float regthresh1 = 0.4f,
                                    float regThresh2 = 0.1f,
-                                   cv::Mat dirs = cv::Mat()) 
-{
+                                   cv::Mat dirs = cv::Mat()) {
   HoughLinesResult result;
   cv::Mat acc;
 
   if (dirs.empty()) {
-    houghLines(img, acc, binThresh);  
+    houghLines(img, acc, binThresh);
   } else {
-    houghLines(img, acc, dirs, binThresh);  
+    houghLines(img, acc, dirs, binThresh);
   }
 
   result.lines = cv::Mat::zeros(img.rows, img.cols, CV_8UC1);
@@ -43,13 +42,11 @@ HoughLinesResult houghLinesFromBin(const cv::Mat &img,
   return result;
 }
 
-HoughLinesResult houghLinesWithGradient(const cv::Mat &img,
-                                        uchar sh, uchar sb,
-                                        uchar binThresh  = 170,
+HoughLinesResult houghLinesWithGradient(const cv::Mat &img, uchar sh, uchar sb,
+                                        uchar binThresh = 170,
                                         Dimension dim = MULTI_DIM,
                                         float regthresh1 = 0.4f,
-                                        float regThresh2 = 0.1f) 
-{
+                                        float regThresh2 = 0.1f) {
   // Unused because blur var wasn't used anywhere
   // int i = 11;
   // cv::bilateralFilter(img, blur, i, i * 2, i / 2);
@@ -59,7 +56,7 @@ HoughLinesResult houghLinesWithGradient(const cv::Mat &img,
   grads = computeGradients(img, h, dim);
 
   cv::Mat mags, uc_mags, dirs, fnl;
-  if (dim==2) {
+  if (dim == 2) {
     magnitudeBD(grads, mags, dirs);
   } else {
     magnitudeMD(grads, mags, dirs);
@@ -70,13 +67,11 @@ HoughLinesResult houghLinesWithGradient(const cv::Mat &img,
   mags.convertTo(uc_mags, CV_8UC1);
   hysteresis(uc_mags, fnl, sh, sb);
 
-  return houghLinesFromBin(fnl, binThresh , regthresh1, regThresh2, dirs);
+  return houghLinesFromBin(fnl, binThresh, regthresh1, regThresh2, dirs);
 }
 
-HoughCirclesResult houghCirclesFromBin(const cv::Mat &img,
-                                      uchar binThresh,
-                                      uchar circleThresh) 
-{
+HoughCirclesResult houghCirclesFromBin(const cv::Mat &img, uchar binThresh,
+                                       uchar circleThresh) {
   HoughCirclesResult result;
   cv::Mat acc;
 
@@ -92,19 +87,17 @@ HoughCirclesResult houghCirclesFromBin(const cv::Mat &img,
   return result;
 }
 
-HoughCirclesResult houghCirclesWithGradient(const cv::Mat &img,
-                                        uchar sh, uchar sb,
-                                        uchar binThresh  = 170,
-                                        uchar circleThresh = 5,
-                                        Dimension dim = MULTI_DIM) 
-{
+HoughCirclesResult houghCirclesWithGradient(const cv::Mat &img, uchar sh,
+                                            uchar sb, uchar binThresh = 170,
+                                            uchar circleThresh = 5,
+                                            Dimension dim = MULTI_DIM) {
   cv::Mat h(3, 3, CV_32F, const_cast<float *>(kernel::kirsch));
 
   std::vector<cv::Mat> grads;
   grads = computeGradients(img, h, dim);
 
   cv::Mat mags, uc_mags, dirs, fnl;
-  if (dim==2) {
+  if (dim == 2) {
     magnitudeBD(grads, mags, dirs);
   } else {
     magnitudeMD(grads, mags, dirs);
@@ -118,7 +111,7 @@ HoughCirclesResult houghCirclesWithGradient(const cv::Mat &img,
   HoughCirclesResult result;
   cv::Mat acc;
 
-  houghCircleDirection(fnl, acc, dirs, binThresh );
+  houghCircleDirection(fnl, acc, dirs, binThresh);
 
   result.circles = cv::Mat::zeros(img.size(), CV_8UC3);
 
@@ -131,11 +124,13 @@ HoughCirclesResult houghCirclesWithGradient(const cv::Mat &img,
 
   //     int x1 = c + 50*a;
   //     int y1 = r + 50*b;
-  //     cv::line(result.circles, {c, r}, {x1, y1}, cv::Scalar(255, 0, 0), 1, cv::LINE_8); 
+  //     cv::line(result.circles, {c, r}, {x1, y1}, cv::Scalar(255, 0, 0), 1,
+  //     cv::LINE_8);
 
   //     int x2 = c - 50*a;
   //     int y2 = r - 50*b;
-  //     cv::line(result.circles, {c, r}, {x2, y2}, cv::Scalar(255, 0, 0), 1, cv::LINE_8); 
+  //     cv::line(result.circles, {c, r}, {x2, y2}, cv::Scalar(255, 0, 0), 1,
+  //     cv::LINE_8);
   //   }
   // }
 

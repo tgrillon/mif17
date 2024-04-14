@@ -1,6 +1,7 @@
 #pragma once
 #include "applications.hpp"
 #include "gradient.hpp"
+#include "multithreading.hpp"
 #include "opencv2/imgproc.hpp"
 #include "utils.hpp"
 #include <opencv2/core.hpp>
@@ -48,7 +49,7 @@ public:
 //
 class DemoHoughLinesGrad : public DemoHoughLinesBase {
 private:
-  int bin_thresh  = 255, multi_dim = 1, compute = 0, invert = 0;
+  int bin_thresh = 255, multi_dim = 1, compute = 0, invert = 0;
   int regThresh1 = 50, regThresh2 = 1, grad = 1;
   int sh = 24, sb = 4;
 
@@ -56,24 +57,28 @@ public:
   DemoHoughLinesGrad(const cv::Mat &img) : DemoHoughLinesBase(img) {}
 
   void process() override {
-    float regThresh1 = ((float)this->regThresh1) / 100;
-    float regThresh2 = ((float)this->regThresh2) / 100;
-    cv::Mat img;
-    if (invert && !grad)
-      cv::bitwise_not(this->img, img);
-    else
-      img = this->img;
+    TimeFunction time([&]() {
+      float regThresh1 = ((float)this->regThresh1) / 100;
+      float regThresh2 = ((float)this->regThresh2) / 100;
+      cv::Mat img;
+      if (invert && !grad)
+        cv::bitwise_not(this->img, img);
+      else
+        img = this->img;
 
-    if (grad) {
-      result = houghLinesWithGradient(img, sh, sb, bin_thresh ,
-                                      multi_dim ? Dimension::MULTI_DIM
-                                                : Dimension::TWO_DIM,
-                                     regThresh1, regThresh2);
-    } else {
-      cv::Mat edge;
-      cv::Canny(img, edge, 200, 50);
-      result = houghLinesFromBin(img, bin_thresh , regThresh1, regThresh2);
-    }
+      if (grad) {
+        result = houghLinesWithGradient(img, sh, sb, bin_thresh,
+                                        multi_dim ? Dimension::MULTI_DIM
+                                                  : Dimension::TWO_DIM,
+                                        regThresh1, regThresh2);
+      } else {
+        cv::Mat edge;
+        cv::Canny(img, edge, 200, 50);
+        result = houghLinesFromBin(img, bin_thresh, regThresh1, regThresh2);
+      }
+    });
+
+    time.print("process");
     window();
   }
 
@@ -88,7 +93,7 @@ public:
       }
     };
 
-    cv::createTrackbar("bin_thresh ", title, &bin_thresh , 255, compute_fn,
+    cv::createTrackbar("bin_thresh ", title, &bin_thresh, 255, compute_fn,
                        this);
     cv::createTrackbar("bin only / with grad", title, &grad, 1, compute_fn,
                        this);
@@ -100,10 +105,8 @@ public:
                        compute_fn, this);
     cv::createTrackbar("reg_thresh_neigh", title, &regThresh2, 100, compute_fn,
                        this);
-    cv::createTrackbar("sh hysteresis", title, &sh, 255, compute_fn,
-                      this);
-    cv::createTrackbar("sb hysteresis", title, &sb, 255, compute_fn,
-                      this);
+    cv::createTrackbar("sh hysteresis", title, &sh, 255, compute_fn, this);
+    cv::createTrackbar("sb hysteresis", title, &sb, 255, compute_fn, this);
     cv::createTrackbar("Compute on changes (key 'R' = compute)", title,
                        &compute, 1, compute_fn, this);
 
@@ -138,7 +141,7 @@ public:
 
 class DemoHoughCirclesGrad : public DemoHoughCirclesBase {
 private:
-  int bin_thresh  = 255, circle_thresh = 5;
+  int bin_thresh = 255, circle_thresh = 5;
   int multi_dim = 1, compute = 0, invert = 0, grad = 1;
   int sh = 24, sb = 4;
 
@@ -146,23 +149,25 @@ public:
   DemoHoughCirclesGrad(const cv::Mat &img) : DemoHoughCirclesBase(img) {}
 
   void process() override {
-    cv::Mat img;
-    if (invert && !grad)
-      cv::bitwise_not(this->img, img);
-    else
-      img = this->img;
+    TimeFunction time([&]() {
+      cv::Mat img;
+      if (invert && !grad)
+        cv::bitwise_not(this->img, img);
+      else
+        img = this->img;
 
-    if (grad) {
-      result = houghCirclesWithGradient(img, sh, sb, 
-                                      bin_thresh, circle_thresh, 
-                                      multi_dim ? Dimension::MULTI_DIM
-                                                : Dimension::TWO_DIM
-                                     );
-    } else {
-      // cv::Mat edge;
-      // cv::Canny(img, edge, 200, 50);
-      result = houghCirclesFromBin(img, bin_thresh, circle_thresh);
-    }
+      if (grad) {
+        result = houghCirclesWithGradient(
+            img, sh, sb, bin_thresh, circle_thresh,
+            multi_dim ? Dimension::MULTI_DIM : Dimension::TWO_DIM);
+      } else {
+        // cv::Mat edge;
+        // cv::Canny(img, edge, 200, 50);
+        result = houghCirclesFromBin(img, bin_thresh, circle_thresh);
+        // result = HoughCirclesFromBinMT(4, img, bin_thresh, circle_thresh);
+      }
+    });
+    time.print("process");
     window();
   }
 
@@ -177,7 +182,7 @@ public:
       }
     };
 
-    cv::createTrackbar("bin_thresh ", title, &bin_thresh , 255, compute_fn,
+    cv::createTrackbar("bin_thresh ", title, &bin_thresh, 255, compute_fn,
                        this);
     cv::createTrackbar("bin only / with grad", title, &grad, 1, compute_fn,
                        this);
@@ -187,10 +192,8 @@ public:
                        this);
     cv::createTrackbar("circle thresh", title, &circle_thresh, 100, compute_fn,
                        this);
-    cv::createTrackbar("sh hysteresis", title, &sh, 255, compute_fn,
-                      this);
-    cv::createTrackbar("sb hysteresis", title, &sb, 255, compute_fn,
-                      this);
+    cv::createTrackbar("sh hysteresis", title, &sh, 255, compute_fn, this);
+    cv::createTrackbar("sb hysteresis", title, &sb, 255, compute_fn, this);
     cv::createTrackbar("Compute on changes (key 'R' = compute)", title,
                        &compute, 1, compute_fn, this);
 
