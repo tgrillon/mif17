@@ -176,7 +176,7 @@ std::vector<Line> getLines(const cv::Mat &bin, float th1 = 0.4f,
         cv::Point p = stack.top();
         stack.pop();
 
-        barycenter += cv::Point2f(x, y);
+        barycenter += cv::Point2f(p.x, p.y);
 
         colorPixelRegion(tmp, stack, th2 * max, p.x, p.y);
 
