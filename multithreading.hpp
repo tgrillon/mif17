@@ -22,10 +22,11 @@ struct MutexMatrix3D {
         pixelMutexes(size_a * size_b * size_c) {}
 
   std::mutex &get_mutex(int a, int b, int c) {
-    if (a + b * size_a + c * size_a * size_b < size_a * size_b * size_c) {
+    int index = a + b * size_a + c * size_a * size_b;
+    if (index > size_a * size_b * size_c || index < 0) {
       std::cerr << std::endl << std::endl << "Invalid......." << std::endl;
     }
-    return pixelMutexes[a + b * size_a + c * size_a * size_b];
+    return pixelMutexes[index];
   }
 };
 
