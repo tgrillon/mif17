@@ -115,26 +115,6 @@ HoughCirclesResult houghCirclesWithGradient(const cv::Mat &img, uchar sh,
 
   result.circles = cv::Mat::zeros(img.size(), CV_8UC3);
 
-  // for (int r = 0; r < img.rows; ++r) {
-  //   for (int c = 0; c < img.cols; ++c) {
-  //     if (fnl.at<uchar>(r, c) < 255) continue;
-  //     float theta = dirs.at<float>(r, c);
-  //     float a = cos(theta);
-  //     float b = sin(theta);
-
-  //     int x1 = c + 50*a;
-  //     int y1 = r + 50*b;
-  //     cv::line(result.circles, {c, r}, {x1, y1}, cv::Scalar(255, 0, 0), 1,
-  //     cv::LINE_8);
-
-  //     int x2 = c - 50*a;
-  //     int y2 = r - 50*b;
-  //     cv::line(result.circles, {c, r}, {x2, y2}, cv::Scalar(255, 0, 0), 1,
-  //     cv::LINE_8);
-  //   }
-  // }
-
-  // result.final = img;//cv::Mat::zeros(img.rows, img.cols, CV_8UC1);
   result.edges = fnl;
 
   drawCircles(img, result.circles, acc, circleThresh);
