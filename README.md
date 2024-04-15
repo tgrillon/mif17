@@ -32,19 +32,19 @@ L'installation de la bibliothèque OpenCV c++ est necéssaire pour que le projet
 
 1. Ce placer à la racine du projet: 
 ```bash
-    $ cd ~/path/to/directory/
+    cd ~/path/to/directory/
 ```
 2. Créer un répertoire `build` et se placer dedans: 
 ```bash
-    $ mkdir build && cd build
+    mkdir build && cd build
 ```
 3. Générer le projet avec `cmake` en mode `Release`: 
 ```bash
-    $ cmake -DCMAKE_BUILD_TYPE=Release ..
+    cmake -DCMAKE_BUILD_TYPE=Release ..
 ```
 4. Compiler le projet avec `make` et exécuter le programme: 
 ```bash
-    $ make && ./hough [lines|circles] <filepath> 
+    make && ./hough [lines|circles] <filepath> 
 ```
 
 ## Explication des arguments de commande

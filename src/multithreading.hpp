@@ -81,10 +81,11 @@ void circle_accumulator(ThreadStruct thread, const cv::Mat &bin,
 //   }
 // }
 
-HoughCirclesResult HoughCirclesFromBinMT(const int nb_threads,
-                                         const cv::Mat &img, uchar binThresh,
-                                         uchar circleThresh) {
-  HoughCirclesResult result;
+HoughResult HoughCirclesFromBinMT(
+  const int nb_threads, const cv::Mat &img, int thickness, 
+  uchar binThresh, uchar circle_thresh, uchar grouping_thresh
+) {
+  HoughResult result;
 
   int offset = img.cols / nb_threads;
 
@@ -119,13 +120,11 @@ HoughCirclesResult HoughCirclesFromBinMT(const int nb_threads,
     threads[i].join();
   }
 
-  result.edges = img;
-  result.circles = img;
+  result.edg = img;
+  result.shapes = img;
 
-  // result.final = img;//cv::Mat::zeros(img.rows, img.cols, CV_8UC1);
-  std::cout << "end" << std::endl;
-
-  drawCircles(img, result.circles, accumulator, circleThresh);
+  auto circles = getCircles(accumulator, circle_thresh, grouping_thresh);
+  drawCircles(circles, result.shapes, thickness);
 
   return result;
 }
