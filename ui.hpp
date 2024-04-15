@@ -22,101 +22,109 @@ public:
 
 class DemoHoughLinesBase : public Viewer {
 protected:
-  HoughLinesResult result;
-  cv::Mat img;
+  HoughResult m_result;
+  cv::Mat m_img;
 
 public:
-  DemoHoughLinesBase(const cv::Mat &img) : img(img) {}
+  DemoHoughLinesBase(const cv::Mat &img) : m_img(img) {}
 
   void window() override {
-    cv::imshow("img", img);
-    cv::imshow("intersect", result.inter);
-    cv::imshow("edges", result.edges);
-    cv::imshow("regimg", result.regimg);
-    cv::imshow("hough", result.lines);
-    cv::imshow("final", result.final);
+    cv::imshow("Input image", m_result.img);
+    cv::imshow("Filtered image", m_result.flt);
+    cv::imshow("Edges", m_result.edg);
+    cv::imshow("Accumulator", m_result.acc);
+    cv::imshow("Final result", m_result.shapes);
   }
 };
 
-// class DemoHoughLinesBin : public DemoHoughLinesBase {
-// public:
-//   DemoHoughLinesBin(const cv::Mat &img) : DemoHoughLinesBase(img) {}
-//
-//   void process() override { houghLinesFromBin(result, img); }
-//
-//   void configure_window() override {}
-// };
-//
 class DemoHoughLinesGrad : public DemoHoughLinesBase {
 private:
-  int bin_thresh = 255, multi_dim = 1, compute = 0, invert = 0;
-  int regThresh1 = 50, regThresh2 = 1, grad = 1;
-  int sh = 24, sb = 4;
+  int m_multi_dim = 1, m_compute = 0, m_invert = 0, m_grad = 1;
+  int m_bin_thresh  = 255, m_line_thresh = 50, m_grouping_thresh = 1;
+  int m_sh = 24, m_sb = 4;
+  int m_canny = 0, m_use_dirs = 1, m_kernel = 2;
+  int m_thickness = 1;
+  int m_bf_d = 27, m_bf_sigma_color = 27, m_bf_sigma_space = 27;
 
 public:
   DemoHoughLinesGrad(const cv::Mat &img) : DemoHoughLinesBase(img) {}
 
   void process() override {
-    TimeFunction time([&]() {
-      float regThresh1 = ((float)this->regThresh1) / 100;
-      float regThresh2 = ((float)this->regThresh2) / 100;
-      cv::Mat img;
-      if (invert && !grad)
-        cv::bitwise_not(this->img, img);
-      else
-        img = this->img;
+    float line_thresh = ((float)this->m_line_thresh) * 0.01;
+    float grouping_thresh = ((float)this->m_grouping_thresh) * 0.01;
+    cv::Mat img, flt;
+    if (m_invert && !m_grad)
+      cv::bitwise_not(this->m_img, img);
+    else
+      img = this->m_img;
 
-      if (grad) {
-        result = houghLinesWithGradient(img, sh, sb, bin_thresh,
-                                        multi_dim ? Dimension::MULTI_DIM
-                                                  : Dimension::TWO_DIM,
-                                        regThresh1, regThresh2);
-      } else {
-        cv::Mat edge;
-        cv::Canny(img, edge, 200, 50);
-        result = houghLinesFromBin(img, bin_thresh, regThresh1, regThresh2);
-      }
-    });
+    cv::bilateralFilter(m_img, flt, m_bf_d, m_bf_sigma_color, m_bf_sigma_space);
 
-    time.print("process");
+    if (m_grad) {
+      m_result = houghLinesWithGradient(
+        m_img, flt, m_kernel, m_thickness, m_sh, m_sb, m_bin_thresh, line_thresh, grouping_thresh,
+        m_use_dirs, m_multi_dim ? Dimension::MULTI_DIM : Dimension::TWO_DIM
+      );
+    } else {
+      m_result = houghLinesFromBin(
+        m_img, flt, img, m_thickness, m_bin_thresh, line_thresh, grouping_thresh, false, m_canny
+      );
+    }
     window();
   }
 
   void configure_window() override {
-    std::string title = "Hough Line Demo Config";
-    cv::namedWindow(title);
+    std::string w_title = "[Configuration panel] Hough Line Detection";
+    cv::namedWindow(w_title);
 
     auto compute_fn = [](int, void *user) {
       DemoHoughLinesGrad *bthis = static_cast<DemoHoughLinesGrad *>(user);
-      if (bthis->compute) {
+      if (bthis->m_compute) {
         bthis->process();
       }
     };
 
-    cv::createTrackbar("bin_thresh ", title, &bin_thresh, 255, compute_fn,
+    cv::createTrackbar("[Input] Bilateral filter d", w_title, &m_bf_d, 255, compute_fn,
                        this);
-    cv::createTrackbar("bin only / with grad", title, &grad, 1, compute_fn,
+    cv::createTrackbar("[Input] Bilateral filter sigma color", w_title, &m_bf_sigma_color, 255, compute_fn,
                        this);
-    cv::createTrackbar("bin_only_invert_input", title, &invert, 1, compute_fn,
+    cv::createTrackbar("[Input] Bilateral filter sigma space", w_title, &m_bf_sigma_space, 255, compute_fn,
                        this);
-    cv::createTrackbar("grad_multi_dim", title, &multi_dim, 1, compute_fn,
+    cv::createTrackbar("[Binary] Invert binary image", w_title, &m_invert, 1, compute_fn,
                        this);
-    cv::createTrackbar("reg_thresh_initial", title, &regThresh1, 100,
+    cv::createTrackbar("[Binary] Opencv edge detection", w_title, &m_canny, 1, compute_fn,
+                       this);
+    cv::createTrackbar("[Hough] Use gradient ? 0 : no  | 1 : yes ", w_title, &m_grad, 1, compute_fn,
+                       this);
+    cv::createTrackbar("[Gradient] Kernel (0: prewitt | 1: sobel | 2: kirsch)", w_title, &m_kernel , 2, compute_fn,
+                       this);
+    cv::createTrackbar("[Gradient] 0 : Bidirectionnal | 1 : Multidirectionnal", w_title, &m_multi_dim, 1, compute_fn,
+                       this);
+    cv::createTrackbar("[Gradient] Hysteresis : Upper bound (sh)", w_title, &m_sh, 255, compute_fn,
+                      this);
+    cv::createTrackbar("[Gradient] Hysteresis : Lower bound (sb)", w_title, &m_sb, 255, compute_fn,
+                      this);
+    cv::createTrackbar("[Hough + Gradient] Use direction in computation", w_title, &m_use_dirs, 1, compute_fn,
+                      this);
+    cv::createTrackbar("[Hough] Edge detection threshold ", w_title, &m_bin_thresh , 255, compute_fn,
+                       this);
+    cv::createTrackbar("[Hough] Line detection threshold (% of max)", w_title, &m_line_thresh, 100,
                        compute_fn, this);
-    cv::createTrackbar("reg_thresh_neigh", title, &regThresh2, 100, compute_fn,
+    cv::createTrackbar("[Hough] Grouping threshold (% of max)", w_title, &m_grouping_thresh, 100, compute_fn,
                        this);
-    cv::createTrackbar("sh hysteresis", title, &sh, 255, compute_fn, this);
-    cv::createTrackbar("sb hysteresis", title, &sb, 255, compute_fn, this);
-    cv::createTrackbar("Compute on changes (key 'R' = compute)", title,
-                       &compute, 1, compute_fn, this);
+    cv::createTrackbar("[Hough] Shape thickness", w_title, &m_thickness, 10, compute_fn,
+                       this);
+    cv::createTrackbar("Compute with key 'R'", w_title,
+                       &m_compute, 1, compute_fn, this);
 
     while (true) {
       switch (cv::waitKey()) {
       case 'r':
-        this->process();
-        std::cout << "Done!" << std::endl;
+        std::cout << "\x1B[2J\x1B[H";
+        std::cout << "Computing..." << std::endl;
+        MEASURE_TIME(this->process());
+        std::cout << "Done." << std::endl;
         break;
-
       case 27:
         return;
       }
@@ -126,82 +134,107 @@ public:
 
 class DemoHoughCirclesBase : public Viewer {
 protected:
-  HoughCirclesResult result;
-  cv::Mat img;
+  HoughResult m_result;
+  cv::Mat m_img;
 
 public:
-  DemoHoughCirclesBase(const cv::Mat &img) : img(img) {}
+  DemoHoughCirclesBase(const cv::Mat &img) : m_img(img) {}
 
   void window() override {
-    cv::imshow("img", img);
-    cv::imshow("edges", result.edges);
-    cv::imshow("hough", result.circles);
+    cv::imshow("Input image", m_result.img);
+    cv::imshow("Filtered image", m_result.flt);
+    cv::imshow("Edges", m_result.edg);
+    cv::imshow("Final result", m_result.shapes);
   }
 };
 
 class DemoHoughCirclesGrad : public DemoHoughCirclesBase {
 private:
-  int bin_thresh = 255, circle_thresh = 5;
-  int multi_dim = 1, compute = 0, invert = 0, grad = 1;
-  int sh = 24, sb = 4;
+  int m_bin_thresh  = 255, m_circle_thresh = 50, m_grouping_thresh = 1;
+  int m_multi_dim = 1, m_compute = 0, m_invert = 0, m_grad = 1;
+  int m_sh = 24, m_sb = 4;
+  int m_canny = 0, m_use_dirs = 1, m_kernel = 2;
+  int m_thickness = 1;
+  int m_bf_d = 27, m_bf_sigma_color = 27, m_bf_sigma_space = 27;
 
 public:
   DemoHoughCirclesGrad(const cv::Mat &img) : DemoHoughCirclesBase(img) {}
 
   void process() override {
-    TimeFunction time([&]() {
-      cv::Mat img;
-      if (invert && !grad)
-        cv::bitwise_not(this->img, img);
-      else
-        img = this->img;
+    cv::Mat img, flt;
+    float circle_thresh = this->m_circle_thresh * 0.01;
+    float grouping_thresh = this->m_grouping_thresh * 0.01;
+    if (m_invert && !m_grad)
+      cv::bitwise_not(this->m_img, img);
+    else
+      img = this->m_img;
 
-      if (grad) {
-        result = houghCirclesWithGradient(
-            img, sh, sb, bin_thresh, circle_thresh,
-            multi_dim ? Dimension::MULTI_DIM : Dimension::TWO_DIM);
-      } else {
-        // cv::Mat edge;
-        // cv::Canny(img, edge, 200, 50);
-        result = houghCirclesFromBin(img, bin_thresh, circle_thresh);
-        // result = HoughCirclesFromBinMT(4, img, bin_thresh, circle_thresh);
-      }
-    });
-    time.print("process");
+    cv::bilateralFilter(m_img, flt, m_bf_d, m_bf_sigma_color, m_bf_sigma_space);
+
+    if (m_grad) {
+      m_result = houghCirclesWithGradient(
+        img, flt, m_kernel, m_thickness, m_sh, m_sb, m_bin_thresh, circle_thresh, grouping_thresh, 
+        m_use_dirs, m_multi_dim ? Dimension::MULTI_DIM : Dimension::TWO_DIM
+      );
+    } else {
+      m_result = houghCirclesFromBin(
+        m_img, flt, img, m_thickness, m_bin_thresh, circle_thresh, grouping_thresh, false, m_canny
+      );
+    }
     window();
   }
 
   void configure_window() override {
-    std::string title = "Hough Circle Demo Config";
-    cv::namedWindow(title);
+    std::string w_title = "[Configuration panel] Hough Circle Detection";
+    cv::namedWindow(w_title);
 
     auto compute_fn = [](int, void *user) {
       DemoHoughCirclesGrad *bthis = static_cast<DemoHoughCirclesGrad *>(user);
-      if (bthis->compute) {
+      if (bthis->m_compute) {
         bthis->process();
       }
     };
 
-    cv::createTrackbar("bin_thresh ", title, &bin_thresh, 255, compute_fn,
+    cv::createTrackbar("[Input] Bilateral filter d", w_title, &m_bf_d, 255, compute_fn,
                        this);
-    cv::createTrackbar("bin only / with grad", title, &grad, 1, compute_fn,
+    cv::createTrackbar("[Input] Bilateral filter sigma color", w_title, &m_bf_sigma_color, 255, compute_fn,
                        this);
-    cv::createTrackbar("bin_only_invert_input", title, &invert, 1, compute_fn,
+    cv::createTrackbar("[Input] Bilateral filter sigma space", w_title, &m_bf_sigma_space, 255, compute_fn,
                        this);
-    cv::createTrackbar("grad_multi_dim", title, &multi_dim, 1, compute_fn,
+    cv::createTrackbar("[Binary] Invert binary image", w_title, &m_invert, 1, compute_fn,
                        this);
-    cv::createTrackbar("circle thresh", title, &circle_thresh, 100, compute_fn,
+    cv::createTrackbar("[Binary] Opencv edge detection", w_title, &m_canny, 1, compute_fn,
                        this);
-    cv::createTrackbar("sh hysteresis", title, &sh, 255, compute_fn, this);
-    cv::createTrackbar("sb hysteresis", title, &sb, 255, compute_fn, this);
-    cv::createTrackbar("Compute on changes (key 'R' = compute)", title,
-                       &compute, 1, compute_fn, this);
+    cv::createTrackbar("[Hough] Use gradient ? no -> 0 | yes -> 1 ", w_title, &m_grad, 1, compute_fn,
+                       this);
+    cv::createTrackbar("[Gradient] Bidirectionnal -> 0 | Multidirectionnal -> 1", w_title, &m_multi_dim, 1, compute_fn,
+                       this);
+    cv::createTrackbar("[Gradient] Kernel (0: prewitt | 1: sobel | 2: kirsch)", w_title, &m_kernel , 2, compute_fn,
+                       this);
+    cv::createTrackbar("[Gradient] Hysteresis : Upper bound (sb)", w_title, &m_sh, 255, compute_fn,
+                      this);
+    cv::createTrackbar("[Gradient] Hysteresis : Lower bound (sb)", w_title, &m_sb, 255, compute_fn,
+                      this);
+    cv::createTrackbar("[[Hough + Gradient] Use direction in computation", w_title, &m_use_dirs, 1, compute_fn,
+                      this);
+    cv::createTrackbar("[Hough] Edge detection threshold ", w_title, &m_bin_thresh , 255, compute_fn,
+                       this);
+    cv::createTrackbar("[Hough] Circle detection threshold", w_title, &m_circle_thresh, 100, compute_fn,
+                       this);
+    cv::createTrackbar("[Hough] Grouping threshold", w_title, &m_grouping_thresh, 100, compute_fn,
+                       this);
+    cv::createTrackbar("[Hough] Shape thickness", w_title, &m_thickness, 10, compute_fn,
+                       this);
+    cv::createTrackbar("Compute with key 'R'", w_title,
+                       &m_compute, 1, compute_fn, this);
 
     while (true) {
       switch (cv::waitKey()) {
       case 'r':
-        this->process();
-        std::cout << "Done!" << std::endl;
+        std::cout << "\x1B[2J\x1B[H";
+        std::cout << "Computing..." << std::endl;
+        MEASURE_TIME(this->process());
+        std::cout << "Done." << std::endl;
         break;
 
       case 27:

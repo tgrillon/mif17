@@ -9,13 +9,25 @@ struct Line {
   float rho = 0.f;
 };
 
+struct Circle {
+  cv::Point2i center;
+  int radius;
+};
+
 std::vector<float> thetas, rhos;
 
 int max_rho;
 
-bool withinMat(int x, int y, int cols, int rows) {
+bool withinMat(int x, int y, int cols, int rows) 
+{
   return x >= 0 && x < cols && y >= 0 && y < rows;
 }
+
+bool within3DMat(int a, int b, int r, int aSize, int bSize, int rSize) 
+{
+  return a >= 0 && a < aSize && b >= 0 && b < bSize && r >= 0 && r < rSize;
+}
+
 
 void houghLines(cv::Mat bin, cv::Mat &acc, uchar thresh = 170) {
   int max_theta = 180;
@@ -67,7 +79,7 @@ void houghLines(cv::Mat bin, cv::Mat &acc, cv::Mat &dirs, uchar thresh = 170) {
   }
 }
 
-void houghCircle(cv::Mat bin, cv::Mat &acc, uchar th) {
+void houghCircles(cv::Mat bin, cv::Mat &acc, uchar th) {
   // a, b, r
 
   int max_r = std::min(bin.cols, bin.rows);
@@ -110,7 +122,7 @@ void incLineDir(cv::Mat &acc, float theta, int x, int y, int max_a, int max_b,
   } while (true);
 }
 
-void houghCircleDirection(cv::Mat bin, cv::Mat &acc, cv::Mat const &dirs,
+void houghCircles(cv::Mat bin, cv::Mat &acc, cv::Mat const &dirs,
                           uchar th) {
 
   int max_r = sqrt(bin.rows * bin.rows + bin.cols * bin.cols);
@@ -132,6 +144,99 @@ void houghCircleDirection(cv::Mat bin, cv::Mat &acc, cv::Mat const &dirs,
       incLineDir(acc, theta, x, y, max_a, max_b, -1);
     }
   }
+}
+
+void max3DMat(cv::Mat const& mat, double& max)
+{
+  assert(mat.dims == 3);
+  int aSize = mat.size[1];
+  int bSize = mat.size[0];
+  int rSize = mat.size[2];
+
+  max = 0;
+  for (int a = 0; a < aSize; ++a) {
+    for (int b = 0; b < bSize; ++b) {
+      for (int r = 0; r < rSize; ++r) {
+        if (mat.at<float>(b,a,r) > max) {
+          max = mat.at<float>(b,a,r);
+        }
+      }
+    }
+  }
+}
+
+void colorPixel3DRegion(
+  cv::Mat &bin, std::stack<cv::Point3f> &stack, int thresh, int a, int b, int r
+) {
+  assert(bin.dims == 3);
+  int aSize = bin.size[1];
+  int bSize = bin.size[0];
+  int rSize = bin.size[2];
+  bin.at<float>(b,a,r) = 0;
+
+  std::vector<cv::Point3f> neighbors = {
+      {a - 1, b, r}, {a + 1, b, r}, 
+      {a, b - 1, r}, {a, b + 1, r},
+      {a, b, r - 1}, {a, b, r + 1}
+  };
+  for (auto neigh : neighbors) {
+    if (within3DMat(neigh.x, neigh.y, neigh.z, aSize, bSize, rSize)) {
+      if (bin.at<float>(neigh.y, neigh.x, neigh.z) > thresh) {
+        bin.at<float>(neigh.y, neigh.x, neigh.z) = 0;
+        stack.push({neigh.x, neigh.y, neigh.z});
+      }
+    }
+  }
+}
+
+
+std::vector<Circle> getCircles(
+  const cv::Mat &bin, float circle_thresh, float grouping_thresh
+) {
+  assert(bin.dims == 3);
+  int aSize = bin.size[1];
+  int bSize = bin.size[0];
+  int rSize = bin.size[2];
+
+  cv::Mat tmp = bin.clone();
+
+  std::vector<Circle> circles;
+
+  double max;
+  max3DMat(bin, max);
+
+  for (int b = 0; b < bSize; b++) {
+    for (int a = 0; a < aSize; a++) {
+      for (int r = 0; r < rSize; r++) {
+        if (tmp.at<float>(b,a,r) < circle_thresh*max)
+          continue;
+        std::stack<cv::Point3f> stack;
+      
+        stack.push({a, b, r});
+        Circle circle;
+        cv::Point3f barycenter = {0.f, 0.f, 0.f};
+        int count = 0;
+
+        while (!stack.empty()) {
+          cv::Point3f p = stack.top();
+          stack.pop();
+
+          barycenter += cv::Point3f(a, b, r);
+
+          colorPixel3DRegion(tmp, stack, grouping_thresh*max, p.x, p.y, p.z);
+
+          ++count;
+        }
+
+        barycenter /= count;
+        circle.radius = barycenter.z;
+        circle.center = {barycenter.x, barycenter.y};
+        circles.push_back(circle);
+      }
+    }
+  }
+
+  return circles;
 }
 
 void colorPixelRegion(cv::Mat &bin, std::stack<cv::Point> &stack, int thresh,
@@ -194,30 +299,6 @@ std::vector<Line> getLines(const cv::Mat &bin, float th1 = 0.4f,
   return lines;
 }
 
-// std::vector<Line> accLocalExtremum(cv::Mat & acc)
-// {
-//   std::vector<Line> extrema;
-//   bool search = false;
-//   for (int r = 0; r < acc.rows; ++r) {
-//     for (int c = 0; c < acc.cols; ++c) {
-//       float val = acc.at<float>(r, c);
-//       if (val > 0) {
-//         if (!search) {
-//           search = true;
-//           extrema.push_back({r, c});
-//         } else {
-//           Line line = extrema[extrema.size()-1];
-//           if (val > acc.at<float>(line.theta, line.rho)) {
-//             extrema[extrema.size()-1] = {r, c};
-//           }
-//         }
-//       } else search = false;
-//     }
-//   }
-
-//   return extrema;
-// }
-
 void intersectImg(cv::Mat const &bin, cv::Mat const &lns, cv::Mat &dst) {
   assert(bin.type() == lns.type());
   dst = lns.clone();
@@ -239,7 +320,7 @@ void drawLocalExtrema(const std::vector<Line> &lines, cv::Mat &out) {
   }
 }
 
-void drawLines(const std::vector<Line> &lines, cv::Mat &hough_lines) {
+void drawLines(const std::vector<Line> &lines, cv::Mat &out, int thickness) {
   for (auto &line : lines) {
     float theta = line.theta;
     float rho = line.rho;
@@ -255,82 +336,15 @@ void drawLines(const std::vector<Line> &lines, cv::Mat &hough_lines) {
     int x2 = int(x0 - 1000 * (-b));
     int y2 = int(y0 - 1000 * (a));
 
-    cv::line(hough_lines, cv::Point(x1, y1), cv::Point(x2, y2), 255, 1);
+    cv::line(out, cv::Point(x1, y1), cv::Point(x2, y2), {255, 0, 0}, thickness);
   }
 }
 
-void drawCircles(cv::Mat const &src, cv::Mat &dst, cv::Mat const &acc,
-                 uchar th) {
-  dst = cv::Mat::zeros(src.size(), CV_8UC3);
-  for (int b = 0; b < acc.size[0]; ++b) {
-    for (int a = 0; a < acc.size[1]; ++a) {
-      for (int r = 0; r < acc.size[2]; ++r) {
-        if (cv::saturate_cast<uchar>(acc.at<float>(b, a, r)) < th)
-          continue;
-        cv::circle(dst, cv::Point(a, b), r, {255, 0, 0}, 3);
-        cv::drawMarker(dst, cv::Point(a, b), {255, 0, 0}, 1, 10);
-      }
-    }
+void drawCircles(std::vector<Circle> circles, cv::Mat & out, int thickness) 
+{
+  assert(out.type() == CV_8UC3);
+  for (auto & circle : circles) {
+    cv::circle(out, circle.center, circle.radius, {255, 0, 0}, thickness);
+    cv::drawMarker(out, circle.center, {255, 0, 0}, 1, 10);
   }
 }
-
-/*
-*
-    struct Segment {
-        Segment(cv::Point a, cv::Point b)
-        : a(a), b(b) {}
-        cv::Point a, b;
-    };
-    std::vector<Segment> segments;
-
-
-*
-**/
-// Iter sur les segments
-// for (auto d : droites) {
-//     const float step = 0.5f;
-//     const int error = 3;
-
-//     float t = 0;
-//     float count = 0;
-//     float err_count = error;
-
-//     float dx = d.x2 - d.x1;
-//     float dy = d.y2 - d.y1;
-
-//     cv::Point2f o =
-//         {std::clamp(d.x1, 0.f, (float)img_width),
-//         std::clamp(d.y1, 0.f, (float)img_height)};
-//     cv::Vec2f tmp = cv::Vec2f(
-//         std::clamp(dx, 0.f, (float)img_width),
-//         std::clamp(dy, 0.f, (float)img_height)
-//         );
-//     cv::Point2f dir = cv::normalize(tmp) * step;
-//     cv::Point2f p = o, segment_start;
-
-//     do {
-//         p += dir;
-
-//         bool is_edge = mgs.at<uchar>(p.y, p.x) > 100 ? true : false;
-
-//         if (!is_edge){
-//             if (err_count == error - 1){
-//                 segments.push_back(Segment(segment_start, p));
-//             }
-
-//             err_count++;
-//             continue;
-//         }
-
-//         if (err_count >= error) {
-//             segment_start = p;
-//         }
-
-//         err_count = 0;
-
-//     } while (p.x < intersect.cols && p.x >= 0 && p.y < intersect.rows && p.y
-//     >= 0);
-
-//     for (auto s : segments){
-//         cv::line(hough_lines, s.a, s.b, cv::Scalar(255, 0, 0), 1);
-//     }

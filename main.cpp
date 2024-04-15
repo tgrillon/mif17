@@ -23,19 +23,15 @@ int main(int argc, char **argv) {
     return -1;
   } 
 
-  int bf = 29, md = 7;
-  cv::Mat flt, tmp;
-  cv::bilateralFilter(img, flt, bf, bf, bf);
-
       // viewer = new DemoHoughLinesGrad(flt);
 
   if (argc > 1) {
     std::string mode = argv[1];
 
     if (mode.compare("lines") == 0)
-      viewer = new DemoHoughLinesGrad(flt);
+      viewer = new DemoHoughLinesGrad(img);
     else if (mode.compare("circles") == 0)
-      viewer = new DemoHoughCirclesGrad(flt);
+      viewer = new DemoHoughCirclesGrad(img);
     else{
       std::cerr << "Invalid argument for viewer mode";
       return -1;
