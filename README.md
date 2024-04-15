@@ -59,12 +59,12 @@ L'exécutable `./hough` prend deux arguments :
   
 ## Application 
 
-Il suffit d'appuyer sur la touche '**R**' pour exécuter l'algorithme de **Hough Transform** avec les paramètres définit dans le panneau de contrôle. 
+Il suffit d'appuyer sur la touche '**R**' pour exécuter l'algorithme de Transformée de Hough avec les paramètres définit dans le panneau de contrôle. 
 
 ### Panneau de configuration
 
 Au démarrage de l'application, un panneau de contrôle, avec des sliders sur différents paramètres, s'affiche. Plusieurs types de paramètres peuvent être modifier pour influer sur le résultat de l'algorithme de Hough Transform:
-- **[Input]** : Paramètres pour le filtre bilatéral appliqué à l'image lors de la phase de pré-traitement.  
+- **[Input]** : Paramètres pour le filtre bilatéral appliqué à l'image lors de la phase de prétraitement.  
 - **[Binary]** : Paramètres à modifier lorsqsu'une image binaire est utilisée en entrée ou si l'on ne souhaite pas utiliser de gradient.  
 - **[Gradient]** : Paramètres à modifier pour le calcul du gradient. 
 - **[Hough]** : Paramètres correspondant généralement aux seuils utilisés dans l'algorithme de la transformée de Hough. 
@@ -73,16 +73,16 @@ Au démarrage de l'application, un panneau de contrôle, avec des sliders sur di
 
 ### Démo Hough Line
 
-La démonstration de détection de lignes affiche cinq images : 
+La démonstration de détection de ligne affiche cinq images : 
 - Input image : l'image d'entrée 
 - Filtered image : l'image filtrée 
-- Edges : les contours détecté (soit par le gradient, soit par la fonction '*cv::canny()*' d'OpenCV)
+- Edges : les contours détectés (soit par le gradient, soit par la fonction '*cv::canny()*' d'OpenCV)
 - Accumulator : l'accumulateur représentant le nombre d'intersections pour chaque droite définit en fonction de $\boldsymbol\theta$ et $\boldsymbol\rho$
 - Final result : L'image résultat qui combine l'image source avec les lignes détectées
 
 ### Démo Hough Circle
 
-La démonstration de détection de cercles affiche les mêmes images que celle des lignes excepté l'accumulateur qui, ayant trois dimensions, ne peut être affiché simplement avec la fonction '*cv::imshow()*' d'OpenCV. 
+La démonstration de détection de cercles affiche les mêmes images que celle des lignes excepté l'accumulateur qui, ayant trois dimensions, ne peut être affiché simplement avec la fonction '*cv::imshow()*' d'OpenCV.
 
 ## Configurations intéressantes 
 
