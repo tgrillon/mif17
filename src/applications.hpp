@@ -81,8 +81,7 @@ HoughResult houghLinesFromBin(
   auto lines = getLines(acc, line_thresh, grouping_thresh);
   drawLocalExtrema(lines, result.acc);
 
-  cv::Mat temp = result.img.clone();
-  cv::cvtColor(temp, result.shapes, cv::COLOR_GRAY2BGR);
+  result.shapes = result.img.clone();
   drawLines(lines, result.shapes, thickness);
 
   return result;
@@ -141,8 +140,7 @@ HoughResult houghCirclesFromBin(
 
   auto circles = getCircles(acc, circle_thresh, grouping_thresh);
 
-  cv::Mat temp = result.img.clone();
-  cv::cvtColor(temp, result.shapes, cv::COLOR_GRAY2BGR);
+  result.shapes = result.img.clone();
   drawCircles(circles, result.shapes, thickness);
 
   return result;

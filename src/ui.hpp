@@ -52,13 +52,14 @@ public:
   void process() override {
     float line_thresh = ((float)this->m_line_thresh) * 0.01;
     float grouping_thresh = ((float)this->m_grouping_thresh) * 0.01;
-    cv::Mat img, flt;
+    cv::Mat img, gray, flt;
     if (m_invert && !m_grad)
       cv::bitwise_not(this->m_img, img);
     else
       img = this->m_img;
 
-    cv::bilateralFilter(m_img, flt, m_bf_d, m_bf_sigma_color, m_bf_sigma_space);
+    cv::cvtColor(m_img, gray, cv::COLOR_BGR2GRAY);
+    cv::bilateralFilter(gray, flt, m_bf_d, m_bf_sigma_color, m_bf_sigma_space);
 
     if (m_grad) {
       m_result = houghLinesWithGradient(
@@ -161,7 +162,7 @@ public:
   DemoHoughCirclesGrad(const cv::Mat &img) : DemoHoughCirclesBase(img) {}
 
   void process() override {
-    cv::Mat img, flt;
+    cv::Mat img, gray, flt;
     float circle_thresh = this->m_circle_thresh * 0.01;
     float grouping_thresh = this->m_grouping_thresh * 0.01;
     if (m_invert && !m_grad)
@@ -169,7 +170,8 @@ public:
     else
       img = this->m_img;
 
-    cv::bilateralFilter(m_img, flt, m_bf_d, m_bf_sigma_color, m_bf_sigma_space);
+    cv::cvtColor(m_img, gray, cv::COLOR_BGR2GRAY);
+    cv::bilateralFilter(gray, flt, m_bf_d, m_bf_sigma_color, m_bf_sigma_space);
 
     if (m_grad) {
       m_result = houghCirclesWithGradient(

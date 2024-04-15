@@ -6,10 +6,10 @@ Ce projet à été réalisé dans le cadre de l'unité d'enseignement "Analyse d
 
 ```bash
 ├── ressources # images utilisées pour les démos
-|   ├── Cathedrale-Lyon.jpg
-|   ├── Droites_simples.png
-|   ├── Exemple_simple.jpg
-|   └── Image_simple.jpg
+|   ├── cathedrale_lyon.jpg
+|   ├── droites_simples.png
+|   ├── exemple_simple.jpg
+|   └── image_simple.jpg
 ├── src # fichiers c++
 |   ├── applications.cpp 
 |   ├── gradient.hpp

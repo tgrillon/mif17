@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
       (argc > 2) ? argv[2] : "../ressources/Droites_simples.png";
 
   cv::Mat img;
-  img = cv::imread(filepath, cv::IMREAD_GRAYSCALE);
+  img = cv::imread(filepath);
 
   if (!img.data) {
     printf("No image data \n");
