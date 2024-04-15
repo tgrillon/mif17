@@ -40,10 +40,10 @@ public:
 class DemoHoughLinesGrad : public DemoHoughLinesBase {
 private:
   int m_multi_dim = 1, m_compute = 0, m_invert = 0, m_grad = 1;
-  int m_bin_thresh  = 255, m_line_thresh = 50, m_grouping_thresh = 1;
+  int m_bin_thresh  = 255, m_line_thresh = 50, m_grouping_thresh = 20;
   int m_sh = 24, m_sb = 4;
   int m_canny = 0, m_use_dirs = 1, m_kernel = 2;
-  int m_thickness = 1;
+  int m_thickness = 2;
   int m_bf_d = 27, m_bf_sigma_color = 27, m_bf_sigma_space = 27;
 
 public:
@@ -97,9 +97,9 @@ public:
                        this);
     cv::createTrackbar("[Hough] Use gradient ? 0 : no  | 1 : yes ", w_title, &m_grad, 1, compute_fn,
                        this);
-    cv::createTrackbar("[Gradient] Kernel (0: prewitt | 1: sobel | 2: kirsch)", w_title, &m_kernel , 2, compute_fn,
-                       this);
     cv::createTrackbar("[Gradient] 0 : Bidirectionnal | 1 : Multidirectionnal", w_title, &m_multi_dim, 1, compute_fn,
+                       this);
+    cv::createTrackbar("[Gradient] Kernel (0: prewitt | 1: sobel | 2: kirsch)", w_title, &m_kernel , 2, compute_fn,
                        this);
     cv::createTrackbar("[Gradient] Hysteresis : Upper bound (sh)", w_title, &m_sh, 255, compute_fn,
                       this);
@@ -151,11 +151,11 @@ public:
 
 class DemoHoughCirclesGrad : public DemoHoughCirclesBase {
 private:
-  int m_bin_thresh  = 255, m_circle_thresh = 50, m_grouping_thresh = 1;
+  int m_bin_thresh  = 255, m_circle_thresh = 50, m_grouping_thresh = 20;
   int m_multi_dim = 1, m_compute = 0, m_invert = 0, m_grad = 1;
   int m_sh = 24, m_sb = 4;
   int m_canny = 0, m_use_dirs = 1, m_kernel = 2;
-  int m_thickness = 1;
+  int m_thickness = 2;
   int m_bf_d = 27, m_bf_sigma_color = 27, m_bf_sigma_space = 27;
 
 public:

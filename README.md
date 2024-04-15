@@ -83,3 +83,140 @@ La démonstration de détection de lignes affiche cinq images :
 ### Démo Hough Circle
 
 La démonstration de détection de cercles affiche les mêmes images que celle des lignes excepté l'accumulateur qui, ayant trois dimensions, ne peut être affiché simplement avec la fonction '*cv::imshow()*' d'OpenCV. 
+
+## Configurations intéressantes 
+
+\* : valeur de paramètre différente que par défaut
+
+- cathedrale_lyon.jpg
+  - lines
+```
+    * [Input] Bilateral filter d -> 15
+    * [Input] Bilateral filter sigma color -> 32
+    * [Input] Bilateral filter sigma space -> 43
+    [Binary] Invert binary image -> 0
+    [Binary] Opencv edge detection -> 0
+    [Hough] Use gradient ? no -> 0 | yes -> 1 -> 1
+    [Gradient] Bidirectionnal -> 0 | Multidirectionnal -> 1 -> 1
+    [Gradient] Kernel (0: prewitt | 1: sobel | 2: kirsch) -> 2
+    * [Gradient] Hysteresis : Upper bound (sb) -> 22
+    * [Gradient] Hysteresis : Lower bound (sb) -> 21
+    [Hough + Gradient] Use direction in computation -> 1
+    [Hough] Edge detection threshold -> 255
+    [Hough] Line detection threshold -> 50
+    * [Hough] Grouping threshold -> 34
+    [Hough] Shape thickness -> 2
+```
+  - circles
+```
+    * [Input] Bilateral filter d -> 18
+    [Input] Bilateral filter sigma color -> 27
+    [Input] Bilateral filter sigma space -> 27
+    [Binary] Invert binary image -> 0
+    [Binary] Opencv edge detection -> 0
+    [Hough] Use gradient ? no -> 0 | yes -> 1  -> 1
+    * [Gradient] Bidirectionnal -> 0 | Multidirectionnal -> 1 -> 0
+    [Gradient] Kernel (0: prewitt | 1: sobel | 2: kirsch) -> 2
+    [Gradient] Hysteresis : Upper bound (sb) -> 24
+    * [Gradient] Hysteresis : Lower bound (sb) -> 24
+    [Hough + Gradient] Use direction in computation -> 1
+    [Hough] Edge detection threshold -> 255
+    * [Hough] Circle detection threshold -> 85
+    * [Hough] Grouping threshold -> 79
+    [Hough] Shape thickness -> 2
+```
+- droites_simples.png
+  - lines
+```
+    * [Input] Bilateral filter d -> 5
+    * [Input] Bilateral filter sigma color -> 6
+    * [Input] Bilateral filter sigma space -> 4
+    * [Binary] Invert binary image -> 1
+    [Binary] Opencv edge detection -> 0
+    * [Hough] Use gradient ? no -> 0 | yes -> 1 -> 0
+    [Gradient] Bidirectionnal -> 0 | Multidirectionnal -> 1 -> 1
+    [Gradient] Kernel (0: prewitt | 1: sobel | 2: kirsch) -> 2
+    [Gradient] Hysteresis : Upper bound (sb) -> 24
+    [Gradient] Hysteresis : Lower bound (sb) -> 4
+    [Hough + Gradient] Use direction in computation -> 1
+    * [Hough] Edge detection threshold -> 201
+    * [Hough] Line detection threshold -> 21
+    * [Hough] Grouping threshold -> 22
+    [Hough] Shape thickness -> 2
+```
+
+- exemple_simple.jpg
+  - lines
+```
+    [Input] Bilateral filter d -> 27
+    [Input] Bilateral filter sigma color -> 27
+    [Input] Bilateral filter sigma space -> 27
+    [Binary] Invert binary image -> 0
+    [Binary] Opencv edge detection -> 0
+    [Hough] Use gradient ? no -> 0 | yes -> 1 -> 1
+    [Gradient] Bidirectionnal -> 0 | Multidirectionnal -> 1 -> 1
+    [Gradient] Kernel (0: prewitt | 1: sobel | 2: kirsch) -> 2
+    [Gradient] Hysteresis : Upper bound (sb) -> 24
+    [Gradient] Hysteresis : Lower bound (sb) -> 4
+    [Hough + Gradient] Use direction in computation -> 1
+    [Hough] Edge detection threshold -> 255
+    * [Hough] Line detection threshold -> 31
+    * [Hough] Grouping threshold -> 34
+    [Hough] Shape thickness -> 2
+```
+  - circles
+```
+    * [Input] Bilateral filter d -> 10
+    * [Input] Bilateral filter sigma color -> 12
+    * [Input] Bilateral filter sigma space -> 7
+    [Binary] Invert binary image -> 0
+    [Binary] Opencv edge detection -> 0
+    [Hough] Use gradient ? no -> 0 | yes -> 1 -> 1
+    * [Gradient] Bidirectionnal -> 0 | Multidirectionnal -> 1 -> 0
+    [Gradient] Kernel (0: prewitt | 1: sobel | 2: kirsch) -> 2
+    [Gradient] Hysteresis : Upper bound (sb) -> 24
+    [Gradient] Hysteresis : Lower bound (sb) -> 4
+    [Hough + Gradient] Use direction in computation -> 1
+    [Hough] Edge detection threshold -> 255
+    * [Hough] Circle detection threshold -> 96
+    * [Hough] Grouping threshold -> 54
+    [Hough] Shape thickness -> 2
+```
+- image_simple.jpg
+  - lines
+```
+    [Input] Bilateral filter d -> 27
+    [Input] Bilateral filter sigma color -> 27
+    [Input] Bilateral filter sigma space -> 27
+    * [Binary] Invert binary image -> 1
+    * [Binary] Opencv edge detection -> 1
+    * [Hough] Use gradient ? no -> 0 | yes -> 1 -> 0
+    [Gradient] Bidirectionnal -> 0 | Multidirectionnal -> 1 -> 1
+    [Gradient] Kernel (0: prewitt | 1: sobel | 2: kirsch) -> 2
+    [Gradient] Hysteresis : Upper bound (sb) -> 24
+    [Gradient] Hysteresis : Lower bound (sb) -> 4
+    [Hough + Gradient] Use direction in computation -> 1
+    [Hough] Edge detection threshold -> 255
+    * [Hough] Line detection threshold -> 39
+    * [Hough] Grouping threshold -> 8
+    [Hough] Shape thickness -> 2
+```
+  - circles
+```
+    [Input] Bilateral filter d -> 27
+    [Input] Bilateral filter sigma color -> 27
+    [Input] Bilateral filter sigma space -> 27
+    [Binary] Invert binary image -> 0
+    [Binary] Opencv edge detection -> 0
+    [Hough] Use gradient ? no -> 0 | yes -> 1  -> 1
+    * [Gradient] Bidirectionnal -> 0 | Multidirectionnal -> 1 -> 0
+    [Gradient] Kernel (0: prewitt | 1: sobel | 2: kirsch) -> 2
+    [Gradient] Hysteresis : Upper bound (sb) -> 24
+    [Gradient] Hysteresis : Lower bound (sb) -> 4
+    [Hough + Gradient] Use direction in computation -> 1
+    [Hough] Edge detection threshold -> 255
+    * [Hough] Circle detection threshold -> 72
+    * [Hough] Grouping threshold -> 38
+    [Hough] Shape thickness -> 2
+```
+
