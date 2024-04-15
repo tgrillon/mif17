@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
   // }
 
   const char *filepath =
-      (argc > 2) ? argv[2] : "../ressources/Droites_simples.png";
+      (argc > 2) ? argv[2] : "../ressources/droites_simples.png";
 
   cv::Mat img;
   img = cv::imread(filepath);
