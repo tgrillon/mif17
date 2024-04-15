@@ -50,18 +50,19 @@ L'installation de la bibliothèque OpenCV c++ est necéssaire pour que le projet
 ## Explication des arguments de commande
 
 L'exécutable `./hough` prend deux arguments :
-1. Le mode 
+1. Le **mode** 
    - `lines` -> détection de ligne 
    - `circles` -> détection de cercles 
-2. Le fichier 
+2. Le **chemin du fichier** testé  
    - rien -> `../ressources/Droites_simples.png`
    - `../ressources/<image_name>`
   
-## Démo 
+## Application 
 
- Il suffit d'appuyer sur la touche '**R**' pour exécuter l'algorithme de **Hough Transform** avec les paramètres définit dans le panneau de contrôle. 
+Il suffit d'appuyer sur la touche '**R**' pour exécuter l'algorithme de **Hough Transform** avec les paramètres définit dans le panneau de contrôle. 
 
 ### Panneau de configuration
+
 Au démarrage de l'application, un panneau de contrôle, avec des sliders sur différents paramètres, s'affiche. Plusieurs types de paramètres peuvent être modifier pour influer sur le résultat de l'algorithme de Hough Transform:
 - **[Input]** : Paramètres pour le filtre bilatéral appliqué à l'image lors de la phase de pré-traitement.  
 - **[Binary]** : Paramètres à modifier lorsqsu'une image binaire est utilisée en entrée ou si l'on ne souhaite pas utiliser de gradient.  
